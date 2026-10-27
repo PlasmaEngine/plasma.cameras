@@ -1,0 +1,40 @@
+// plasma.cameras — gameplay cameras: views, the camera director and its modifier stack.
+//
+// The AUTHORED manifest, kept in source next to the plugin. Component hashes and sizes are NOT
+// here: the packaging step computes those and emits them into the published manifest.
+//
+// Field reference and validation rules: Docs/PluginPackageManagerPlan.html §05.
+
+PackageInfo
+{
+	string %Id{"plasma.cameras"}
+	string %Version{"1.0.1"}
+	string %Publisher{"PlasmaTechnology"}
+	string %License{"MIT"}
+	string %Homepage{"https://plasmagameengine.com"}
+
+	string %MinEngineVersion{"0.11.2"}
+	string %MaxEngineVersion{""}
+	string %AbiTag{"win64-msvc19-0.11.2-abi6-dev"}
+
+	string %DisplayName{"Gameplay Cameras"}
+	string %Category{"Gameplay"}
+	string %Description{"Gameplay cameras: third-person, first-person, fixed, rail and top-down views; a camera director that blends between them by priority; framing modifiers (soft-center composition, rule-of-thirds balanced framing of several subjects, look at points of interest, lock-on, focus pulls) and effect modifiers (shake, FOV kick, zoom, recoil, head bob, lean, landing, damping); camera volumes.
+
+The third-person view, head bone and camera shake components used to ship with Game Components. Their type names and saved data are unchanged, so existing scenes and prefabs load as they are."}
+
+	string %EditorPlugins{"plEditorPluginCameras"}
+	string %EditorEnginePlugins{}
+	string %RuntimePlugins{"plCamerasPlugin"}
+	string %PackageDependencies{}
+
+	// ---- assets ---------------------------------------------------------------
+	// Shape icons, mounted as a data directory so Editor/ShapeIcons/<type> resolves like the engine's own.
+	Mount { string %Path{"Assets"} string %RootName{"plasma.cameras"} bool %Writable{false} }
+
+	Component { string %Name{"assets"} string %Platform{"any"} }
+	Component { string %Name{"manifest"} string %Platform{"any"} }
+	Component { string %Name{"runtime-win64"} string %Platform{"win64"} }
+	Component { string %Name{"editor-win64"} string %Platform{"win64"} }
+	Component { string %Name{"tool"} string %Platform{"any"} string %Path{"EditorIcons"} }
+}

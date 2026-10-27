@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Gameplay Cameras — PlasmaEngine2 Manual</title>
+<style>
+  :root {
+    --bg: #0f141a; --panel: #161d25; --panel2: #1b242e; --ink: #dbe4ec; --muted: #8698a9;
+    --line: #263442; --accent: #7cc3d9; --amber: #d9a35c; --ok: #79c98f; --code-bg: #10171e;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: "Segoe UI", system-ui, sans-serif; font-size: 15.5px; line-height: 1.65; }
+  a { color: var(--accent); }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 44px 28px 90px; }
+  h1, h2, h3, .crumbs, .tag { font-family: "Bahnschrift", "Arial Narrow", sans-serif; }
+  .crumbs { text-transform: uppercase; letter-spacing: 0.14em; font-size: 12px; color: var(--muted); margin: 0 0 10px; }
+  .crumbs a { color: var(--muted); }
+  h1 { font-size: 38px; margin: 0 0 8px; }
+  .rule { height: 4px; width: 160px; margin: 16px 0 24px; border: none;
+    background: repeating-linear-gradient(-45deg, var(--amber) 0 8px, transparent 8px 16px); }
+  h2 { font-size: 22px; letter-spacing: 0.02em; margin: 46px 0 10px; text-transform: uppercase; }
+  h3 { font-size: 17px; margin: 26px 0 6px; }
+  p, li { max-width: 78ch; }
+  p.lede { color: var(--muted); }
+  code { font-family: "Cascadia Code", "Consolas", monospace; font-size: 0.86em; background: var(--code-bg); border: 1px solid var(--line); padding: 1px 5px; border-radius: 2px; }
+  table { border-collapse: collapse; width: 100%; background: var(--panel); }
+  .tblwrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 3px; margin: 16px 0; }
+  th { text-align: left; font-family: "Bahnschrift", "Arial Narrow", sans-serif; font-size: 12.5px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); padding: 9px 13px; border-bottom: 2px solid var(--line); background: var(--panel2); }
+  td { padding: 9px 13px; border-bottom: 1px solid var(--line); vertical-align: top; font-size: 14px; }
+  tr:last-child td { border-bottom: none; }
+  .note { border-left: 3px solid var(--accent); background: var(--panel); padding: 10px 16px; margin: 16px 0; font-size: 14px; max-width: 78ch; }
+  .note.warn { border-left-color: var(--amber); }
+  .note .nh { font-family: "Bahnschrift", "Arial Narrow", sans-serif; font-size: 11.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 2px; }
+  ol.steps li { margin: 8px 0; }
+  .flow { display: flex; flex-wrap: wrap; align-items: stretch; gap: 8px; margin: 18px 0; }
+  .flow .box { background: var(--panel); border: 1px solid var(--line); border-radius: 3px; padding: 10px 14px; font-size: 13.5px; flex: 1 1 140px; }
+  .flow .box b { display: block; font-family: "Bahnschrift", "Arial Narrow", sans-serif; letter-spacing: 0.04em; color: var(--accent); }
+  .flow .arrow { align-self: center; color: var(--muted); }
+  .cards { display: grid; gap: 14px; margin-top: 18px; }
+  a.card { display: block; background: var(--panel); border: 1px solid var(--line); border-radius: 3px; padding: 18px 22px; text-decoration: none; color: var(--ink); }
+  a.card:hover { border-color: var(--accent); }
+  a.card .t { font-weight: 600; font-size: 17px; color: var(--accent); }
+  a.card .d { color: var(--muted); font-size: 14px; margin-top: 4px; }
+  .tag { font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ok); }
+  .seealso { margin-top: 48px; border-top: 1px dashed var(--line); padding-top: 16px; font-size: 14px; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="crumbs"><a href="index.html">Manual</a> / Gameplay Cameras</p>
+  <h1>Gameplay Cameras</h1>
+  <hr class="rule" />
+  <p class="lede">
+    The Gameplay Cameras package (<code>plasma.cameras</code>) decides where the game camera is, what it looks at
+    and how it moves. Camera <b>views</b> compute a pose, a <b>camera director</b> picks one view at a time and
+    blends between them, and a <b>modifier stack</b> frames subjects on screen and adds motion such as shake,
+    recoil and head bob. The result is written to the scene's Main View camera.
+  </p>
+
+  <h2>Concepts</h2>
+
+  <h3>Views</h3>
+  <p>
+    A view is a component that works out a camera pose (position, rotation, field of view, focus distance and
+    near plane) once per frame. It does not move anything by itself when a director is present. The package
+    ships five views:
+  </p>
+  <div class="tblwrap"><table>
+    <tr><th>View</th><th>Use it for</th></tr>
+    <tr><td>Third Person View</td><td>A camera on an arm behind a character, pulled in by collision.</td></tr>
+    <tr><td>First Person View</td><td>A camera at a character's eyes, with smoothed eye height and clamped pitch.</td></tr>
+    <tr><td>Fixed View</td><td>A camera that stays where it is placed and can track and frame a target.</td></tr>
+    <tr><td>Rail View</td><td>A camera that rides along a spline and looks at a target.</td></tr>
+    <tr><td>Top-Down View</td><td>A camera high above a target at a fixed pitch, with zoom steps, rotation steps and panning.</td></tr>
+  </table></div>
+
+  <h3>The camera director</h3>
+  <p>
+    The <b>Camera Director</b> component sits next to the Main View camera. Views ask to be shown through
+    <b>requests</b> with a priority. The player's own view is always requested at priority 10, camera volumes
+    request at 20 by default, and scripts pick their own priority. The highest priority wins and the newest
+    request wins a tie. Every change of view blends from wherever the camera is at that moment, so a blend that
+    is interrupted by another one never pops. While a sequence cut shows another camera, the director steps
+    aside and blends back when the cut ends.
+  </p>
+
+  <h3>The modifier stack</h3>
+  <p>
+    Modifiers adjust the pose after the view has computed it and the director has blended it. They live in the
+    <code>Modifiers</code> list of the director (applied to every view) and of each view (applied only while that
+    view is active). They run in two fixed stages:
+  </p>
+  <div class="flow">
+    <div class="box"><b>View</b>computes a pose</div>
+    <div class="arrow">&rarr;</div>
+    <div class="box"><b>Director</b>picks the top request, blends</div>
+    <div class="arrow">&rarr;</div>
+    <div class="box"><b>Framing stage</b>Composition, Look At, Look Hint, Focus, Lock-On</div>
+    <div class="arrow">&rarr;</div>
+    <div class="box"><b>Effects stage</b>Shake, FOV Kick, Zoom, Recoil, Head Bob, Lean, Landing, Damping</div>
+    <div class="arrow">&rarr;</div>
+    <div class="box"><b>Camera</b>transform, field of view, focus</div>
+  </div>
+  <p>
+    Within each stage the active view's modifiers run first, then the director's, each list in order. Framing
+    always runs before effects, so a framing modifier never mistakes shake for subject movement.
+  </p>
+
+  <h3>Volumes and points of interest</h3>
+  <p>
+    A <b>Camera Volume</b> is a box or sphere that requests a view while the player is inside it. A <b>Camera
+    Point Of Interest</b> marks something worth looking at: when the player presses the Look At key, the camera
+    frames the player and the point together. A <b>Camera Shake Volume Sphere</b> adds shake around a position.
+  </p>
+
+  <h3>Standalone mode</h3>
+  <p>
+    When a world contains no Camera Director at all, every active view moves its own object instead: it computes
+    its pose, applies its own modifiers and writes the result to its object and to a camera component on that
+    object. A single camera works this way without a director, and so does every scene that used the Third
+    Person View before the director existed. Adding one director to the world switches every view in it to
+    director mode.
+  </p>
+  <div class="note">
+    <div class="nh">Note</div>
+    In standalone mode a view never writes a focus distance to its camera; only the director does that (see its
+    <code>WriteFocus</code> property). The field of view is written in both modes: a view with
+    <code>FieldOfView</code> 0 (the default) keeps the camera's own field of view, read once when play starts.
+  </div>
+
+  <h3>Legacy components</h3>
+  <p>
+    The Head Bone and Camera Shake components are kept so existing content keeps working. They appear under
+    <b>Cameras/Legacy</b> in the component menu. New content uses the First Person View and the Shake modifier
+    instead. See <a href="Migration.html">Migration from Game Components</a>.
+  </p>
+
+  <h3>When the cameras update</h3>
+  <p>
+    All cameras of a world update once per frame in the post-transform phase, after objects have moved, and
+    only while the world simulates. In the editor, selecting an object with a view draws its rig; while playing,
+    the <code>Cameras.Debug</code> cvar shows what the director is doing (see
+    <a href="Director.html#debugging">Debugging</a>).
+  </p>
+
+  <h2>Quick start</h2>
+  <p>A third-person camera with blending and shake, in a scene that has a character:</p>
+  <ol class="steps">
+    <li>Add the <b>Gameplay Cameras</b> package to the project in the package manager.</li>
+    <li>Under the character, create a child object named <code>CameraView</code> and add a <b>Third Person
+      View</b>. Its <code>TargetObject</code> defaults to <code>..</code>, which is the parent, so it follows the
+      character. Set <code>TargetOffsetLow</code> and <code>TargetOffsetHigh</code> to points on the character,
+      for example (0, 0, 1.2) and (0, 0, 1.7).</li>
+    <li>Create an object named <code>Camera</code> with a <b>Camera</b> component whose Usage Hint is
+      <b>Main View</b>, and add a <b>Camera Director</b> to the same object.</li>
+    <li>Set the director's <code>DefaultView</code> to the <code>CameraView</code> object.</li>
+    <li>In the director's <code>Modifiers</code> list, add a <b>Shake</b> modifier.</li>
+    <li>Play. Run <code>Cameras.Debug 1</code> in the console to see the request stack and the modifiers. A
+      script can call <code>AddTrauma(0.6)</code> on the director to shake the camera.</li>
+  </ol>
+  <div class="note">
+    <div class="nh">Note</div>
+    Without the director (steps 3 and 4), put the Camera component on the <code>CameraView</code> object itself.
+    The view then runs in standalone mode and moves that object.
+  </div>
+
+  <h2>Pages</h2>
+  <div class="cards">
+    <a class="card" href="Recipes.html">
+      <span class="tag">Setups</span>
+      <div class="t">Common Camera Setups</div>
+      <div class="d">Complete setups to start from: over-the-shoulder, exploration, first-person shooter, lock-on, fixed camera per room, rail, top-down, scripted shots and dialogue, explosions.</div>
+    </a>
+    <a class="card" href="Views.html">
+      <span class="tag">Views</span>
+      <div class="t">Camera Views</div>
+      <div class="d">Common view properties, Third Person, First Person, Fixed, Rail and Top-Down views, with third-person and first-person setup workflows.</div>
+    </a>
+    <a class="card" href="Director.html">
+      <span class="tag">Director</span>
+      <div class="t">Camera Director, Requests and Volumes</div>
+      <div class="d">Priorities, blending, timed requests, the script API, camera messages, Camera Volumes, the Cameras.Debug cvar and the stats group.</div>
+    </a>
+    <a class="card" href="Modifiers.html">
+      <span class="tag">Modifiers</span>
+      <div class="t">The Modifier Stack and Effect Modifiers</div>
+      <div class="d">Stages, order, view scopes and XR rules, then Shake, FOV Kick, Zoom, Recoil, Head Bob, Lean, Landing and Damping.</div>
+    </a>
+    <a class="card" href="Framing.html">
+      <span class="tag">Framing</span>
+      <div class="t">Framing, Look At and Focus</div>
+      <div class="d">Composition and Balanced Framing, Look At with points of interest, Look Hint, Focus and Lock-On, with a "press F to look at" workflow.</div>
+    </a>
+    <a class="card" href="PlayerSettings.html">
+      <span class="tag">Input</span>
+      <div class="t">Player Look Settings and Look Input</div>
+      <div class="d">Sensitivity, invert Y, field-of-view offset and framing assist stored in InputBindings.ddl, and how views read look actions.</div>
+    </a>
+    <a class="card" href="Migration.html">
+      <span class="tag">Upgrading</span>
+      <div class="t">Migration from Game Components</div>
+      <div class="d">The four camera types that moved from Game Components 1.x, what stays the same, and what C++ projects need to do.</div>
+    </a>
+  </div>
+
+  <div class="seealso">
+    Gameplay Cameras manual &middot; package <code>plasma.cameras</code> 1.0.0 &middot; runtime plugin
+    <code>plCamerasPlugin</code> &middot; code lives in <code>Source/CamerasPlugin</code> (Core, Views, Modifiers,
+    Volumes, Legacy).
+  </div>
+</div>
+</body>
+</html>

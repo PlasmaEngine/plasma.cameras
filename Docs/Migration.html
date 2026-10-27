@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Migration from Game Components — PlasmaEngine2 Manual</title>
+<style>
+  :root {
+    --bg: #0f141a; --panel: #161d25; --panel2: #1b242e; --ink: #dbe4ec; --muted: #8698a9;
+    --line: #263442; --accent: #7cc3d9; --amber: #d9a35c; --ok: #79c98f; --code-bg: #10171e;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: "Segoe UI", system-ui, sans-serif; font-size: 15.5px; line-height: 1.65; }
+  a { color: var(--accent); }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 44px 28px 90px; }
+  h1, h2, h3, .crumbs { font-family: "Bahnschrift", "Arial Narrow", sans-serif; }
+  .crumbs { text-transform: uppercase; letter-spacing: 0.14em; font-size: 12px; color: var(--muted); margin: 0 0 10px; }
+  .crumbs a { color: var(--muted); }
+  h1 { font-size: 34px; margin: 0 0 14px; }
+  h2 { font-size: 22px; letter-spacing: 0.02em; margin: 46px 0 10px; text-transform: uppercase; }
+  h3 { font-size: 17px; margin: 26px 0 6px; }
+  p, li { max-width: 78ch; }
+  code { font-family: "Cascadia Code", "Consolas", monospace; font-size: 0.86em; background: var(--code-bg); border: 1px solid var(--line); padding: 1px 5px; border-radius: 2px; }
+  table { border-collapse: collapse; width: 100%; background: var(--panel); }
+  .tblwrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 3px; margin: 16px 0; }
+  th { text-align: left; font-family: "Bahnschrift", "Arial Narrow", sans-serif; font-size: 12.5px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); padding: 9px 13px; border-bottom: 2px solid var(--line); background: var(--panel2); }
+  td { padding: 9px 13px; border-bottom: 1px solid var(--line); vertical-align: top; font-size: 14px; }
+  tr:last-child td { border-bottom: none; }
+  .note { border-left: 3px solid var(--accent); background: var(--panel); padding: 10px 16px; margin: 16px 0; font-size: 14px; max-width: 78ch; }
+  .note.warn { border-left-color: var(--amber); }
+  .note .nh { font-family: "Bahnschrift", "Arial Narrow", sans-serif; font-size: 11.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 2px; }
+  ol.steps li { margin: 8px 0; }
+  .seealso { margin-top: 48px; border-top: 1px dashed var(--line); padding-top: 16px; font-size: 14px; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="crumbs"><a href="index.html">Manual</a> / <a href="index.html">Gameplay Cameras</a> / Migration</p>
+  <h1>Migration from Game Components</h1>
+
+  <p>
+    The camera components that shipped with Game Components 1.x now live in the Gameplay Cameras package. Their
+    type names and saved data are unchanged, so scenes and prefabs load as they are once the project has both
+    packages. This page lists what moved, what the editor does when a project opens, and what C++ projects need
+    to change.
+  </p>
+
+  <h2>What moved</h2>
+  <div class="tblwrap"><table>
+    <tr><th>Type</th><th>Component name</th><th>Now listed under</th><th>Header</th></tr>
+    <tr><td><code>plThirdPersonViewComponent</code></td><td>Third Person View</td><td>Cameras</td><td><code>CamerasPlugin/Views/ThirdPersonViewComponent.h</code></td></tr>
+    <tr><td><code>plHeadBoneComponent</code></td><td>Head Bone</td><td>Cameras/Legacy</td><td><code>CamerasPlugin/Legacy/HeadBoneComponent.h</code></td></tr>
+    <tr><td><code>plCameraShakeComponent</code></td><td>Camera Shake</td><td>Cameras/Legacy</td><td><code>CamerasPlugin/Legacy/CameraShakeComponent.h</code></td></tr>
+    <tr><td><code>plCameraShakeVolumeSphereComponent</code> (and its base <code>plCameraShakeVolumeComponent</code>)</td><td>Camera Shake Volume Sphere</td><td>Cameras/Shake</td><td><code>CamerasPlugin/Volumes/CameraShakeVolumeComponent.h</code></td></tr>
+  </table></div>
+  <p>
+    Names and saved data are the same as in Game Components 1.x. The Third Person View is now a camera view at
+    type version 2: version-1 data loads into the same properties, and the properties added in version 2 default
+    to the old behaviour (see <a href="Views.html">Version-1 compatible defaults</a>). Head Bone and Camera Shake
+    work as before. Their shape icons moved with them.
+  </p>
+
+  <h2>Package versions</h2>
+  <p>
+    Game Components 2.0.0 no longer contains these types and declares that it requires
+    <code>plasma.cameras</code> 1.x. A project that updates Game Components to 2.0.0 also needs Gameplay
+    Cameras; without it, the components above are missing when its scenes load.
+  </p>
+
+  <h3>When a project opens</h3>
+  <p>
+    When the editor opens a project, it reads the requirements of the packages the project uses. If an installed
+    package requires one that is not part of the project, the editor lists it ("needed by ...") and offers to add
+    it. Accepting adds the package to the project's <code>Editor/Packages.ddl</code>; if it is not installed on
+    this machine yet, the normal install prompt follows. Declining logs a warning, and the moved components stay
+    missing until the package is added.
+  </p>
+
+  <h3>Upgrading a project</h3>
+  <ol class="steps">
+    <li>Update Game Components to 2.0.0 in the package manager.</li>
+    <li>Reopen the project. When the editor offers to add <code>plasma.cameras</code>, accept, and install it if
+      asked.</li>
+    <li>Open a scene or prefab that uses a Third Person View, Head Bone or Camera Shake and check the components
+      are present with their old values.</li>
+    <li>For a C++ project, regenerate the project's workspace and rebuild (see below).</li>
+    <li>Play. Without a Camera Director in the world, the Third Person View still moves its own object exactly as
+      before.</li>
+  </ol>
+
+  <h2>C++ projects</h2>
+  <ul>
+    <li><b>Include paths.</b> The old Game Components headers still exist as forwarding headers, so existing
+      includes keep compiling:
+      <div class="tblwrap"><table>
+        <tr><th>Old include</th><th>Forwards to</th></tr>
+        <tr><td><code>GameComponentsPlugin/Cameras/ThirdPersonViewComponent.h</code></td><td><code>CamerasPlugin/Views/ThirdPersonViewComponent.h</code></td></tr>
+        <tr><td><code>GameComponentsPlugin/Gameplay/HeadBoneComponent.h</code></td><td><code>CamerasPlugin/Legacy/HeadBoneComponent.h</code></td></tr>
+        <tr><td><code>GameComponentsPlugin/Effects/Shake/CameraShakeComponent.h</code></td><td><code>CamerasPlugin/Legacy/CameraShakeComponent.h</code></td></tr>
+        <tr><td><code>GameComponentsPlugin/Effects/Shake/CameraShakeVolumeComponent.h</code></td><td><code>CamerasPlugin/Volumes/CameraShakeVolumeComponent.h</code></td></tr>
+      </table></div>
+      Switch to the new paths when convenient.</li>
+    <li><b>Linking.</b> The types are now exported by <code>plCamerasPlugin</code>, so code that uses them must
+      link against it. Once the package is part of the project, the editor-generated active-plugins build file
+      (<code>CppSource/Configs/&lt;Project&gt;ActivePlugins.pb.cs</code>) adds the package's include path and
+      <code>plCamerasPlugin</code>'s import library. Regenerate the workspace and rebuild.</li>
+  </ul>
+
+  <h2>Scripts</h2>
+  <p>
+    C# and other scripts bind to components and functions by name, so they need no change. Third Person View's
+    <code>RotateUp</code> and Head Bone's <code>SetVerticalRotation</code> and <code>ChangeVerticalRotation</code>
+    keep their names and arguments.
+  </p>
+
+  <h2>Moving to the new components (optional)</h2>
+  <div class="tblwrap"><table>
+    <tr><th>Old setup</th><th>New setup</th></tr>
+    <tr><td>Camera with a Third Person View on a child of the character</td><td>Keep the view and add a Camera Director to the camera object for blending, volumes and modifiers. See <a href="Views.html">Setting up a third-person camera</a>.</td></tr>
+    <tr><td>Head Bone under the character's head object</td><td>A First Person View under the head object. Scripts calling <code>SetVerticalRotation</code> / <code>ChangeVerticalRotation</code> work on it unchanged. Remove the Head Bone so the camera is not pitched twice.</td></tr>
+    <tr><td>Camera Shake on a parent of the camera</td><td>A Shake modifier on the director with <code>UseShakeVolumes</code> on. It reads the same shake volumes, and also reacts to <code>AddTrauma</code> and Shake impulses.</td></tr>
+  </table></div>
+
+  <h2>Troubleshooting</h2>
+  <div class="tblwrap"><table>
+    <tr><th>Symptom</th><th>Likely cause</th></tr>
+    <tr><td>Camera components are missing from scenes after updating Game Components</td><td><code>plasma.cameras</code> is not part of the project. Reopen the project and accept the offer, or add it in the package manager.</td></tr>
+    <tr><td>Linker errors for <code>plThirdPersonViewComponent</code> or the shake types</td><td>The C++ project was not regenerated after adding the package, so it does not link <code>plCamerasPlugin</code>.</td></tr>
+    <tr><td>Camera pitches twice as fast in first person</td><td>Both a Head Bone and a First Person View pitch the camera. Keep one.</td></tr>
+  </table></div>
+
+  <div class="seealso"><b>See also:</b>
+    <a href="index.html">Gameplay Cameras</a> &middot;
+    <a href="Views.html">Camera Views</a> &middot;
+    <a href="Modifiers.html">The Modifier Stack</a> &middot;
+    <a href="Director.html">Camera Director</a>
+  </div>
+</div>
+</body>
+</html>

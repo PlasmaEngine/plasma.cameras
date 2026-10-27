@@ -1,0 +1,19 @@
+// for a description of the options see:
+// Code/EditorPlugins/Assets/EditorPluginAssets/Assets.plPluginBundle
+
+PluginInfo
+{
+	string %DisplayName{"Gameplay Cameras"}
+	string %Category{"Gameplay"}
+	string %MinEngineVersion{"0.11.2"}
+	string %MaxEngineVersion{""}
+	string %Description{"Gameplay cameras: views, a camera director with blending and priorities, framing and effect modifiers, camera volumes and points of interest."}
+	string %EditorPlugins{"plEditorPluginCameras"}
+	string %EditorEnginePlugins{}
+	string %RuntimePlugins{"plCamerasPlugin"}
+	string %PackageDependencies{}
+	string %RequiredPlugins{}
+	string %ExclusiveFeatures{}
+	string %EnabledInTemplates{"General3D"}
+	string %PlasmaBuildTargetName{"CamerasPlugin"}
+}

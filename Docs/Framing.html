@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Framing, Look At and Focus — PlasmaEngine2 Manual</title>
+<style>
+  :root {
+    --bg: #0f141a; --panel: #161d25; --panel2: #1b242e; --ink: #dbe4ec; --muted: #8698a9;
+    --line: #263442; --accent: #7cc3d9; --amber: #d9a35c; --ok: #79c98f; --code-bg: #10171e;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: "Segoe UI", system-ui, sans-serif; font-size: 15.5px; line-height: 1.65; }
+  a { color: var(--accent); }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 44px 28px 90px; }
+  h1, h2, h3, .crumbs { font-family: "Bahnschrift", "Arial Narrow", sans-serif; }
+  .crumbs { text-transform: uppercase; letter-spacing: 0.14em; font-size: 12px; color: var(--muted); margin: 0 0 10px; }
+  .crumbs a { color: var(--muted); }
+  h1 { font-size: 34px; margin: 0 0 14px; }
+  h2 { font-size: 22px; letter-spacing: 0.02em; margin: 46px 0 10px; text-transform: uppercase; }
+  h3 { font-size: 17px; margin: 26px 0 6px; }
+  p, li { max-width: 78ch; }
+  code { font-family: "Cascadia Code", "Consolas", monospace; font-size: 0.86em; background: var(--code-bg); border: 1px solid var(--line); padding: 1px 5px; border-radius: 2px; }
+  table { border-collapse: collapse; width: 100%; background: var(--panel); }
+  .tblwrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 3px; margin: 16px 0; }
+  th { text-align: left; font-family: "Bahnschrift", "Arial Narrow", sans-serif; font-size: 12.5px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); padding: 9px 13px; border-bottom: 2px solid var(--line); background: var(--panel2); }
+  td { padding: 9px 13px; border-bottom: 1px solid var(--line); vertical-align: top; font-size: 14px; }
+  td:first-child { white-space: nowrap; }
+  tr:last-child td { border-bottom: none; }
+  tr.grp td { background: var(--panel2); color: var(--muted); font-family: "Bahnschrift", "Arial Narrow", sans-serif; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; padding: 6px 13px; }
+  .note { border-left: 3px solid var(--accent); background: var(--panel); padding: 10px 16px; margin: 16px 0; font-size: 14px; max-width: 78ch; }
+  .note.warn { border-left-color: var(--amber); }
+  .note .nh { font-family: "Bahnschrift", "Arial Narrow", sans-serif; font-size: 11.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 2px; }
+  ol.steps li { margin: 8px 0; }
+  .screen { display: block; margin: 18px 0; max-width: 480px; width: 100%; }
+  .refs { font-size: 13px; color: var(--muted); }
+  .seealso { margin-top: 48px; border-top: 1px dashed var(--line); padding-top: 16px; font-size: 14px; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="crumbs"><a href="index.html">Manual</a> / <a href="index.html">Gameplay Cameras</a> / Framing</p>
+  <h1>Framing, Look At and Focus</h1>
+
+  <p>
+    Framing modifiers decide where things appear on screen. <b>Composition</b> keeps the view's subject at a
+    chosen screen point and, when a second subject is added, moves the camera so both land on their points.
+    <b>Look At</b> and <b>Lock-On</b> supply that second subject. <b>Look Hint</b> gently turns the camera toward
+    nearby points of interest, and <b>Focus</b> keeps the depth of field on whatever matters. All of them run in
+    the framing stage, before any effect modifier (see <a href="Modifiers.html">The Modifier Stack</a>).
+  </p>
+
+  <h2>Screen coordinates</h2>
+  <p>
+    Framing works in screen coordinates from -1 to 1 on both axes, with 0 at the center and +Y up. The
+    rule-of-thirds lines sit at &plusmn;1/3. Zone sizes are half-sizes in these units, so a dead zone of
+    0.12 &times; 0.10 covers 12% of the screen width and 10% of its height.
+  </p>
+  <svg class="screen" viewBox="0 0 320 180" role="img" aria-label="Screen anchors: nine rule-of-thirds points, a soft zone and a dead zone around the center">
+    <rect x="0.5" y="0.5" width="319" height="179" fill="#10171e" stroke="#263442" />
+    <line x1="106.7" y1="0" x2="106.7" y2="180" stroke="#dbe4ec" stroke-opacity="0.2" />
+    <line x1="213.3" y1="0" x2="213.3" y2="180" stroke="#dbe4ec" stroke-opacity="0.2" />
+    <line x1="0" y1="60" x2="320" y2="60" stroke="#dbe4ec" stroke-opacity="0.2" />
+    <line x1="0" y1="120" x2="320" y2="120" stroke="#dbe4ec" stroke-opacity="0.2" />
+    <rect x="72" y="40.5" width="176" height="99" fill="none" stroke="#7cc3d9" stroke-opacity="0.7" />
+    <rect x="140.8" y="81" width="38.4" height="18" fill="none" stroke="#dbe4ec" stroke-opacity="0.7" />
+    <g fill="#d9a35c">
+      <circle cx="106.7" cy="60" r="3" /><circle cx="160" cy="60" r="3" /><circle cx="213.3" cy="60" r="3" />
+      <circle cx="106.7" cy="90" r="3" /><circle cx="160" cy="90" r="3" /><circle cx="213.3" cy="90" r="3" />
+      <circle cx="106.7" cy="120" r="3" /><circle cx="160" cy="120" r="3" /><circle cx="213.3" cy="120" r="3" />
+    </g>
+    <text x="8" y="172" fill="#8698a9" font-size="10" font-family="Segoe UI, sans-serif">amber: anchors &middot; white: dead zone &middot; blue: soft zone</text>
+  </svg>
+  <p>
+    Anchors are the nine thirds points (Upper Left, Upper Center, Upper Right, Middle Left, Center, Middle Right,
+    Lower Left, Lower Center, Lower Right) or a Custom point. <code>Cameras.Debug 2</code> draws the same guides
+    over the game view while Composition runs.
+  </p>
+
+  <h2>Composition</h2>
+  <p>
+    <code>plCameraCompositionModifier</code> places the view's subject on screen. Its default scope is Third
+    Person, Fixed and Rail views.
+  </p>
+
+  <h3>One subject</h3>
+  <p>
+    Alone, the subject sits at the <code>SoloPoint</code>, and Composition only rotates the camera:
+  </p>
+  <ul>
+    <li>Inside the <b>dead zone</b> around the anchor, the camera does not turn.</li>
+    <li>In the <b>soft zone</b>, the camera turns toward the subject, smoothed by <code>Damping</code>.</li>
+    <li>The subject never leaves the soft zone: past its edge the correction is immediate.</li>
+  </ul>
+  <p>
+    A camera jump of more than 3 m is treated as a cut, and the subject is framed again from scratch.
+  </p>
+
+  <h3>Assist while the player steers</h3>
+  <p>
+    On first- and third-person views, which the player steers, Composition only assists. In frames where the
+    player turns the camera, the soft-zone correction is off. In other frames it is scaled by the player's assist
+    setting: <code>Camera.MouseAssist</code> (default 0) with keyboard and mouse, <code>Camera.GamepadAssist</code>
+    (default 1) otherwise. The soft-zone edge always holds. See <a href="PlayerSettings.html">Player Look
+    Settings</a>. Fixed and Rail views have no player look input, so Composition owns their aim fully.
+  </p>
+
+  <h3>Several subjects</h3>
+  <p>
+    A second subject can come from three places, checked in this order: a <b>Look At</b> in progress, a
+    <b>Lock-On</b> target, or the first usable entry of the <code>Subjects</code> list (its object exists and its
+    <code>Weight</code> is above 0). One extra subject is framed at a time. With a second subject, Composition
+    moves the camera as well as turning it, using Balanced Framing (below). The view's subject goes to the
+    layout's player anchor and the second subject to the layout's target anchor.
+  </p>
+  <div class="tblwrap"><table>
+    <tr><th>Layout</th><th>Player anchor</th><th>Target anchor</th></tr>
+    <tr><td>Thirds Diagonal</td><td>Lower Left</td><td>Upper Right</td></tr>
+    <tr><td>Thirds Horizontal</td><td>Middle Left</td><td>Middle Right</td></tr>
+    <tr><td>Over The Shoulder</td><td>Lower Left</td><td>Middle Right</td></tr>
+    <tr><td>Custom</td><td>Center</td><td>The subject entry's own <code>Anchor</code> (Subjects list only)</td></tr>
+  </table></div>
+  <p>
+    With <code>Mirror</code> set to Auto, the layout is flipped left to right when the target is on the other side
+    of the player, which needs less camera travel. The decision is made once, when the second subject appears,
+    and kept for as long as it is framed. When framing starts or ends, the camera position and the player's
+    screen point both slide between the solo and the two-subject framing, so neither end pops.
+  </p>
+
+  <h3>Composition properties</h3>
+  <div class="tblwrap"><table>
+    <tr><th>Property</th><th>Default</th><th>Description</th></tr>
+    <tr><td><code>Views</code></td><td>Third Person, Fixed, Rail</td><td>View kinds this modifier applies to.</td></tr>
+    <tr><td><code>SoloPoint</code></td><td>Center</td><td>Center, Left Third, Right Third, or Leading Room: the third behind the subject's direction of travel, so it has room to move into. Leading Room switches sides only on clear sideways movement (above 0.35 m/s) and eases across.</td></tr>
+    <tr><td><code>DeadZone</code></td><td>(0.12, 0.10)</td><td>Half-size of the dead zone, in screen units (0&ndash;0.9).</td></tr>
+    <tr><td><code>SoftZone</code></td><td>0.55</td><td>Half-size of the soft zone, in screen units, the same on both axes (0.05&ndash;0.95).</td></tr>
+    <tr><td><code>Damping</code></td><td>0.35 s</td><td>Time constant for turning while the subject is in the soft zone.</td></tr>
+    <tr class="grp"><td colspan="3">Several Subjects</td></tr>
+    <tr><td><code>Layout</code></td><td>Thirds Diagonal</td><td>Layout for subjects from the <code>Subjects</code> list.</td></tr>
+    <tr><td><code>Mirror</code></td><td>Auto</td><td>Auto or Off, for subjects from the <code>Subjects</code> list.</td></tr>
+    <tr><td><code>Subjects</code></td><td>empty</td><td>Extra subjects to frame with the view's subject (see below).</td></tr>
+    <tr><td><code>MinDistance</code></td><td>2.5</td><td>Closest the camera may be to the player while framing two subjects, in meters.</td></tr>
+    <tr><td><code>MaxDistance</code></td><td>10</td><td>Farthest the camera may be from the player while framing two subjects, in meters.</td></tr>
+    <tr><td><code>MaxFieldOfView</code></td><td>0</td><td>When the two subjects cannot be framed exactly, the field of view may widen up to this many degrees if that gets closer. 0 never widens.</td></tr>
+    <tr><td><code>CollisionLayer</code></td><td>0</td><td>Physics collision layer for the collision sweep.</td></tr>
+  </table></div>
+  <p>Each entry of the <code>Subjects</code> list has these properties:</p>
+  <div class="tblwrap"><table>
+    <tr><th>Property</th><th>Default</th><th>Description</th></tr>
+    <tr><td><code>Object</code></td><td>empty</td><td>Object path or name, searched relative to the view's object.</td></tr>
+    <tr><td><code>Offset</code></td><td>(0, 0, 0)</td><td>Point to frame, in the object's space.</td></tr>
+    <tr><td><code>Anchor</code></td><td>Upper Right</td><td>Screen anchor for this subject. Used with the Custom layout; other layouts use their own anchors.</td></tr>
+    <tr><td><code>CustomAnchor</code></td><td>(0, 0)</td><td>Screen point when <code>Anchor</code> is Custom.</td></tr>
+    <tr><td><code>Weight</code></td><td>1</td><td>0 skips the entry. Any value above 0 frames it.</td></tr>
+    <tr><td><code>MustKeep</code></td><td>off</td><td>Stored with the entry. The current solver does not use it.</td></tr>
+  </table></div>
+
+  <h2>Balanced Framing</h2>
+  <p>
+    Balanced Framing is how Composition places the camera for two subjects. In plain words:
+  </p>
+  <ol>
+    <li><b>The player is pinned exactly.</b> Whatever happens, the view's subject lands on its anchor.</li>
+    <li><b>The camera moves on its orbit.</b> For two screen points and a field of view, the two subjects must
+      appear a fixed angle apart. Every camera position that sees them that far apart lies on one surface around
+      them. The solver stays at the distance from the player closest to where the camera is now, within
+      <code>MinDistance</code> and <code>MaxDistance</code>, and searches around that surface for the position
+      nearest the current camera where the target lands on its anchor. The horizon stays level.</li>
+    <li><b>The camera stays at a usable height.</b> Positions more than 25&deg; below or 70&deg; above the player
+      are not used, because from there the camera would look almost straight up or down.</li>
+    <li><b>It relaxes when it cannot fit.</b> If no position frames both exactly (the subjects are too far apart,
+      too close, or only fit from straight above), the closest framing is used: the player stays pinned and the
+      target drifts off its anchor. If <code>MaxFieldOfView</code> is set and a wider lens gets closer, the field
+      of view widens.</li>
+    <li><b>Collision.</b> A 0.2 m sphere is swept from the player to the solved position against static geometry.
+      If it hits, the camera is pulled in along that line (never closer than 0.3 m), which keeps the player
+      pinned and lets the target relax.</li>
+    <li><b>Continuity.</b> The camera eases toward each new solution over about a quarter of a second, so a
+      subject crossing behind the player does not make it jump.</li>
+  </ol>
+  <p>
+    The debug overlay reports <code>balanced</code> when both subjects are framed exactly, <code>balanced
+    (relaxed)</code> otherwise, and the target's distance from its anchor in screen units.
+  </p>
+
+  <h2 id="lookat">Look At</h2>
+  <p>
+    <code>plCameraLookAtModifier</code> is "press F to look at". When its <code>Action</code> is pressed, it frames
+    the best <a href="#poi">point of interest</a> in range. Its default scope is First and Third Person views.
+  </p>
+  <h3>Choosing the point</h3>
+  <p>While not framing, Look At checks every active point of interest each frame. A point is eligible when:</p>
+  <ul>
+    <li>the player (the view's subject) is within its <code>ActivationRadius</code> and inside its
+      <code>ViewCone</code>;</li>
+    <li>its frame point is in front of the camera (within roughly 78&deg; of the view direction);</li>
+    <li>if <code>RequireLineOfSight</code> is on, nothing static blocks a ray from the camera to it.</li>
+  </ul>
+  <p>
+    Among eligible points the highest <code>Priority</code> wins, then the one nearest the player. Whenever the
+    best point changes, Look At sends <code>plMsgCameraPointOfInterestChanged</code> as an event message to the
+    player object, where the first handler on it or its parents receives it. The message carries the point's
+    component handle (invalid when nothing is in range) and its <code>DisplayName</code>, so game UI can show or
+    hide its prompt. C++ code can also ask the director with <code>GetBestPointOfInterest()</code>.
+  </p>
+  <h3>Framing it</h3>
+  <p>
+    Look At starts on a key press while a point is eligible, on the director's <code>LookAtObject</code>, or by
+    itself the first time an <code>AutoTrigger</code> point becomes eligible. It then ramps in over
+    <code>BlendIn</code>:
+  </p>
+  <ul>
+    <li><b>Balanced</b> framing hands the point to Composition as a second subject, laid out by
+      <code>Layout</code>, so the camera moves to show the player and the point together. This needs a
+      Composition modifier whose scope includes the active view.</li>
+    <li><b>Aim</b> framing, or Balanced framing without a Composition in scope, turns the camera to the point and
+      blends the field of view to the zoom field of view. In first person this is what happens with the default
+      scopes, since Composition does not include first-person views.</li>
+  </ul>
+  <p>It ends when:</p>
+  <ul>
+    <li>Hold is For Duration and <code>BlendIn</code> plus the hold time has passed (the point's
+      <code>HoldTime</code> if set, otherwise <code>Duration</code>);</li>
+    <li>Hold is While Held and the key is released after the blend-in;</li>
+    <li><code>BreakOnInput</code> is on and the player turns the camera (after the first 0.2 s);</li>
+    <li>the point is removed.</li>
+  </ul>
+  <p>
+    Then it ramps out, and <code>Release</code> decides where the view looks: <b>Keep Direction</b> hands the
+    camera's final direction to the view, so nothing snaps back; <b>Return</b> hands back the direction from
+    before the look started. Views that keep their own look direction (Third Person and First Person) take it
+    over; Fixed and Rail views ignore it.
+  </p>
+  <div class="note">
+    <div class="nh">Note</div>
+    A First Person View with <code>YawFromEyeObject</code> on takes its yaw from the character again on the next
+    frame, so after a look only the pitch is kept.
+  </div>
+
+  <div class="tblwrap"><table>
+    <tr><th>Property</th><th>Default</th><th>Description</th></tr>
+    <tr><td><code>Views</code></td><td>First Person, Third Person</td><td>View kinds this modifier applies to.</td></tr>
+    <tr><td><code>Action</code></td><td><code>LookAtInterest</code></td><td>Input action that starts a look.</td></tr>
+    <tr><td><code>Framing</code></td><td>Balanced</td><td>Balanced (player and point together, through Composition) or Aim (turn to the point and zoom).</td></tr>
+    <tr><td><code>Layout</code></td><td>Thirds Diagonal</td><td>Two-subject layout for Balanced framing. Custom falls back to Thirds Diagonal.</td></tr>
+    <tr><td><code>Mirror</code></td><td>Auto</td><td>Auto flips the layout when the point is on the player's other side, decided when the look starts. Off never flips.</td></tr>
+    <tr><td><code>BlendIn</code></td><td>0.6 s</td><td>Ramp-in time. The ramp out takes 80% of it.</td></tr>
+    <tr><td><code>Hold</code></td><td>For Duration</td><td>For Duration or While Held.</td></tr>
+    <tr><td><code>Duration</code></td><td>3 s</td><td>Hold time after the blend-in, unless the point sets its own.</td></tr>
+    <tr><td><code>ZoomFieldOfView</code></td><td>45</td><td>Field of view for Aim framing (1&ndash;170), unless the point sets its own.</td></tr>
+    <tr><td><code>Release</code></td><td>Keep Direction</td><td>Keep Direction or Return.</td></tr>
+    <tr><td><code>BreakOnInput</code></td><td>on</td><td>Player look input ends the look early.</td></tr>
+  </table></div>
+
+  <h2 id="poi">Camera Point Of Interest</h2>
+  <p>
+    <code>plCameraPointOfInterestComponent</code> marks something worth looking at. It does nothing on its own;
+    Look At and Look Hint read it. The editor draws its activation radius in gold with a manipulator, and when
+    selected, the edges of its view cone, a line to the frame point and a cross at the frame point.
+  </p>
+  <div class="tblwrap"><table>
+    <tr><th>Property</th><th>Default</th><th>Description</th></tr>
+    <tr><td><code>DisplayName</code></td><td>empty</td><td>Name for the game's prompt, for example "Shrine of Ash".</td></tr>
+    <tr><td><code>ActivationRadius</code></td><td>15</td><td>The player must be within this distance of the object, in meters.</td></tr>
+    <tr><td><code>ViewCone</code></td><td>360&deg;</td><td>Full angle around the object's +X axis in which the player must stand (1&ndash;360&deg;). 360&deg; means any side.</td></tr>
+    <tr><td><code>RequireLineOfSight</code></td><td>on</td><td>The frame point must be visible from the camera (static geometry only).</td></tr>
+    <tr><td><code>Priority</code></td><td>0</td><td>Higher priorities win over nearer points.</td></tr>
+    <tr><td><code>FrameOffset</code></td><td>(0, 0, 0)</td><td>The point the camera frames, in the object's space, for example the top of a statue.</td></tr>
+    <tr><td><code>ZoomFieldOfView</code></td><td>0</td><td>Field of view for Aim framing. 0 uses the modifier's.</td></tr>
+    <tr><td><code>HoldTime</code></td><td>0 s</td><td>How long to hold. 0 uses the modifier's <code>Duration</code>.</td></tr>
+    <tr><td><code>AutoTrigger</code></td><td>off</td><td>Frames itself once, without a key press, the first time it becomes eligible after play starts. For scripted story beats.</td></tr>
+  </table></div>
+
+  <h2>Look Hint</h2>
+  <p>
+    <code>plCameraLookHintModifier</code> is a slow, weak pull toward the nearest point of interest in range,
+    while the player is not steering. After the player has not turned the camera for <code>IdleTime</code>, it
+    turns the view's heading toward the nearest point whose radius and view cone contain the player, at most
+    <code>Speed</code> per second. It changes the view's own look direction, so the player takes over without a
+    jump. It never takes control: any look input resets the idle timer, and it waits while Look At or Lock-On is
+    framing. Line of sight and priority are not checked.
+  </p>
+  <div class="tblwrap"><table>
+    <tr><th>Property</th><th>Default</th><th>Description</th></tr>
+    <tr><td><code>Views</code></td><td>Third Person</td><td>View kinds this modifier applies to.</td></tr>
+    <tr><td><code>Speed</code></td><td>8&deg;</td><td>Turn speed toward the point, in degrees per second.</td></tr>
+    <tr><td><code>IdleTime</code></td><td>1.5 s</td><td>Time without look input before the hint starts.</td></tr>
+  </table></div>
+
+  <h2>Focus</h2>
+  <p>
+    <code>plCameraFocusModifier</code> keeps the depth of field on what matters and pulls focus smoothly over
+    <code>PullTime</code>. It picks the first of:
+  </p>
+  <ol>
+    <li>the Look At or Lock-On target, while one is more than halfway blended in;</li>
+    <li>with Target set to Subject, the view's subject;</li>
+    <li>with Target set to Crosshair, whatever a ray along the view direction hits (static and dynamic shapes), up
+      to <code>MaxDistance</code>;</li>
+    <li>otherwise <code>MaxDistance</code>.</li>
+  </ol>
+  <p>
+    The director writes the result to its camera when its <code>WriteFocus</code> is on, and switches the camera's
+    focus mode to Manual. Views that set their own focus distance (Fixed, Rail, Top-Down) are blended toward
+    Focus's value by its weight. In standalone mode no focus is written.
+  </p>
+  <div class="tblwrap"><table>
+    <tr><th>Property</th><th>Default</th><th>Description</th></tr>
+    <tr><td><code>Views</code></td><td>all</td><td>View kinds this modifier applies to.</td></tr>
+    <tr><td><code>Target</code></td><td>Subject</td><td>Subject or Crosshair.</td></tr>
+    <tr><td><code>PullTime</code></td><td>0.4 s</td><td>Time constant for focus pulls.</td></tr>
+    <tr><td><code>MaxDistance</code></td><td>200</td><td>Crosshair ray length, and the focus distance when nothing else applies (1&ndash;100000).</td></tr>
+  </table></div>
+
+  <h2>Lock-On</h2>
+  <p>
+    <code>plCameraLockOnModifier</code> locks onto a target and keeps it framed with the player through
+    Composition. Targets are objects carrying the tag in <code>TargetTag</code> (default
+    <code>LockOnTarget</code>) that have render bounds (a mesh or other rendered component), lie within
+    <code>MaxDistance</code> of the player and are in front of the camera (within roughly 72&deg; of the view
+    direction).
+  </p>
+  <ul>
+    <li><code>Action</code> toggles the lock with <code>Toggle</code> on, or holds it while pressed with
+      <code>Toggle</code> off. The first target is the one nearest the screen center.</li>
+    <li><code>SwitchAction</code> picks the next target to the right, wrapping around.</li>
+    <li>A target farther than 1.2 &times; <code>MaxDistance</code> is lost; the modifier then picks a new one, or
+      releases the lock when there is none.</li>
+    <li>While Look At frames something, Look At wins.</li>
+  </ul>
+  <div class="note">
+    <div class="nh">Note</div>
+    Lock-On does not turn the camera itself. It needs a Composition modifier whose scope includes the active
+    view.
+  </div>
+  <div class="tblwrap"><table>
+    <tr><th>Property</th><th>Default</th><th>Description</th></tr>
+    <tr><td><code>Views</code></td><td>Third Person</td><td>View kinds this modifier applies to.</td></tr>
+    <tr><td><code>Action</code></td><td><code>LockOn</code></td><td>Input action that locks on.</td></tr>
+    <tr><td><code>SwitchAction</code></td><td>empty</td><td>Input action that switches to the next target.</td></tr>
+    <tr><td><code>Toggle</code></td><td>on</td><td>On: a press toggles the lock. Off: the lock holds while the action is held.</td></tr>
+    <tr><td><code>TargetTag</code></td><td><code>LockOnTarget</code></td><td>Tag that marks lock-on targets.</td></tr>
+    <tr><td><code>MaxDistance</code></td><td>25</td><td>Search radius around the player, in meters (1&ndash;1000).</td></tr>
+    <tr><td><code>TargetOffset</code></td><td>(0, 0, 1.2)</td><td>World-space offset added to the target's position, for example to aim at the chest.</td></tr>
+    <tr><td><code>Layout</code></td><td>Over The Shoulder</td><td>Two-subject layout. Custom falls back to Over The Shoulder.</td></tr>
+    <tr><td><code>Mirror</code></td><td>Auto</td><td>Auto or Off, decided when a target is picked.</td></tr>
+    <tr><td><code>BlendIn</code></td><td>0.4 s</td><td>Ramp time in and out.</td></tr>
+  </table></div>
+
+  <h2>Press F to look at a shrine</h2>
+  <ol class="steps">
+    <li>In the project's input action map, add an action named <code>LookAtInterest</code> and bind it to F and
+      a gamepad button. Make sure the player has a <b>plInputComponent</b> that uses the map.</li>
+    <li>Set up a <a href="Views.html">third-person camera with a Camera Director</a>.</li>
+    <li>In the director's <code>Modifiers</code> list, add <b>Composition</b>, <b>Look At</b> and <b>Focus</b>.
+      Leave Composition's <code>SoloPoint</code> at Center.</li>
+    <li>Select the shrine object and add a <b>Camera Point Of Interest</b>. Set <code>DisplayName</code> to
+      "Shrine of Ash", <code>ActivationRadius</code> to 12, and <code>FrameOffset</code> to the top of the statue,
+      for example (0, 0, 2.5). If the shrine should only be offered from the front, set <code>ViewCone</code> to
+      120&deg; and turn the object so its +X axis faces the approach.</li>
+    <li>On the player, add a script or component that handles <code>plMsgCameraPointOfInterestChanged</code>:
+      show "F Look at" plus <code>DisplayName</code> when the handle is valid, and hide the prompt when it is
+      invalid.</li>
+    <li>Play, walk up to the shrine and press F. The camera moves so the player sits lower left and the statue
+      upper right, holds for three seconds, then keeps the new direction. Turn the camera to break out early.</li>
+    <li>Run <code>Cameras.Debug 2</code> to see the thirds grid and where the statue lands. To show the shrine in
+      a cutscene-like beat without a key press, turn on <code>AutoTrigger</code>, or call
+      <code>LookAtObject("Shrine")</code> on the director.</li>
+  </ol>
+
+  <h2>Troubleshooting</h2>
+  <div class="tblwrap"><table>
+    <tr><th>Symptom</th><th>Likely cause</th></tr>
+    <tr><td>The prompt never appears</td><td>The player is outside <code>ActivationRadius</code> or the view cone, the frame point is behind the camera, or static geometry blocks the line of sight. Look At's debug line reads <code>point in range</code> when a point is eligible.</td></tr>
+    <tr><td>Pressing F turns the camera but does not show the player</td><td>No Composition modifier applies to the active view, or <code>Framing</code> is Aim. In first person this is the default.</td></tr>
+    <tr><td>The target misses its thirds point</td><td>The two subjects cannot be framed within <code>MinDistance</code>/<code>MaxDistance</code> and the elevation limits, or collision pulled the camera in. The overlay shows <code>balanced (relaxed)</code>. Raise <code>MaxDistance</code> or set <code>MaxFieldOfView</code>.</td></tr>
+    <tr><td>Composition fights the mouse</td><td>With <code>Camera.MouseAssist</code> at 0 (the default) only the soft-zone edge corrects the camera. If the edge is reached while turning, widen <code>SoftZone</code>; if a gamepad player feels it, lower <code>Camera.GamepadAssist</code>.</td></tr>
+    <tr><td>Lock-On finds nothing</td><td>Targets lack the <code>TargetTag</code> tag, have no render bounds, are farther than <code>MaxDistance</code>, or are behind the camera.</td></tr>
+    <tr><td>Focus never changes</td><td>The director's <code>WriteFocus</code> is off, or the camera runs in standalone mode.</td></tr>
+  </table></div>
+
+  <p class="refs">
+    Reference: the two-subject camera surface follows Lino &amp; Christie, "Intuitive and Efficient Camera Control
+    with the Toric Space", ACM SIGGRAPH 2015.
+  </p>
+
+  <div class="seealso"><b>See also:</b>
+    <a href="index.html">Gameplay Cameras</a> &middot;
+    <a href="Modifiers.html">The Modifier Stack</a> &middot;
+    <a href="Director.html">Camera Director</a> &middot;
+    <a href="PlayerSettings.html">Player Look Settings</a> &middot;
+    <a href="Views.html">Camera Views</a>
+  </div>
+</div>
+</body>
+</html>

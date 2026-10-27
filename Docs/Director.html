@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Camera Director, Requests and Volumes — PlasmaEngine2 Manual</title>
+<style>
+  :root {
+    --bg: #0f141a; --panel: #161d25; --panel2: #1b242e; --ink: #dbe4ec; --muted: #8698a9;
+    --line: #263442; --accent: #7cc3d9; --amber: #d9a35c; --ok: #79c98f; --code-bg: #10171e;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: "Segoe UI", system-ui, sans-serif; font-size: 15.5px; line-height: 1.65; }
+  a { color: var(--accent); }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 44px 28px 90px; }
+  h1, h2, h3, .crumbs { font-family: "Bahnschrift", "Arial Narrow", sans-serif; }
+  .crumbs { text-transform: uppercase; letter-spacing: 0.14em; font-size: 12px; color: var(--muted); margin: 0 0 10px; }
+  .crumbs a { color: var(--muted); }
+  h1 { font-size: 34px; margin: 0 0 14px; }
+  h2 { font-size: 22px; letter-spacing: 0.02em; margin: 46px 0 10px; text-transform: uppercase; }
+  h3 { font-size: 17px; margin: 26px 0 6px; }
+  p, li { max-width: 78ch; }
+  code { font-family: "Cascadia Code", "Consolas", monospace; font-size: 0.86em; background: var(--code-bg); border: 1px solid var(--line); padding: 1px 5px; border-radius: 2px; }
+  pre { font-family: "Cascadia Code", "Consolas", monospace; font-size: 13px; background: var(--code-bg); border: 1px solid var(--line); border-radius: 3px; padding: 12px 16px; overflow-x: auto; max-width: 78ch; }
+  table { border-collapse: collapse; width: 100%; background: var(--panel); }
+  .tblwrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 3px; margin: 16px 0; }
+  th { text-align: left; font-family: "Bahnschrift", "Arial Narrow", sans-serif; font-size: 12.5px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); padding: 9px 13px; border-bottom: 2px solid var(--line); background: var(--panel2); }
+  td { padding: 9px 13px; border-bottom: 1px solid var(--line); vertical-align: top; font-size: 14px; }
+  td:first-child { white-space: nowrap; }
+  tr:last-child td { border-bottom: none; }
+  .note { border-left: 3px solid var(--accent); background: var(--panel); padding: 10px 16px; margin: 16px 0; font-size: 14px; max-width: 78ch; }
+  .note.warn { border-left-color: var(--amber); }
+  .note .nh { font-family: "Bahnschrift", "Arial Narrow", sans-serif; font-size: 11.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 2px; }
+  ol.steps li { margin: 8px 0; }
+  .seealso { margin-top: 48px; border-top: 1px dashed var(--line); padding-top: 16px; font-size: 14px; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="crumbs"><a href="index.html">Manual</a> / <a href="index.html">Gameplay Cameras</a> / Director</p>
+  <h1>Camera Director, Requests and Volumes</h1>
+
+  <p>
+    The Camera Director (<code>plCameraDirectorComponent</code>) decides which <a href="Views.html">view</a> a
+    player sees. Put it on the same object as the scene's Main View <b>Camera</b> component. Each frame it picks
+    the highest-priority view request, blends to it from wherever the camera is, runs the
+    <a href="Modifiers.html">modifier stack</a> and writes the result to its object and camera: transform, field
+    of view, near plane and, optionally, focus distance.
+  </p>
+
+  <h2>Requests and priorities</h2>
+  <p>
+    Views are shown through <b>requests</b>. A request names a view, a priority, an optional duration and an
+    optional blend. The director keeps a list of open requests and shows the one with the highest priority. When
+    two requests have the same priority, the newest one wins.
+  </p>
+  <div class="tblwrap"><table>
+    <tr><th>Source</th><th>Priority</th><th>Lasts</th></tr>
+    <tr><td>Player view</td><td>10</td><td>Always. It is an implicit request that is never released.</td></tr>
+    <tr><td>Camera Volume</td><td>20 by default (the volume's <code>Priority</code>)</td><td>While the player is inside the volume.</td></tr>
+    <tr><td>Script (<code>ActivateView</code>)</td><td>Chosen by the caller</td><td>Until released, or for the given duration.</td></tr>
+    <tr><td>Message (<code>plMsgCameraRequestView</code>)</td><td>50 unless set</td><td>Until released, or for the given duration.</td></tr>
+  </table></div>
+  <p>
+    A request below 10 never shows, because the player view outranks it. A request at exactly 10 beats the
+    player view, because it is newer. Requests whose view is deleted or deactivated are dropped automatically.
+  </p>
+
+  <h3>The player view</h3>
+  <p>The player view is found in this order:</p>
+  <ol>
+    <li>the view set with <code>SetPlayerViewByName</code> (or <code>SetPlayerView</code> in C++);</li>
+    <li>the view on the <code>DefaultView</code> object;</li>
+    <li>a view on the director's own object;</li>
+    <li>a view on one of the director object's direct children.</li>
+  </ol>
+  <p>If none is found and there is no other request, the director does nothing that frame.</p>
+
+  <h3>Timed requests</h3>
+  <p>
+    A request with a duration above zero ends by itself after that time, as if it had been released. A duration
+    of zero lasts until the request is released by id or by view.
+  </p>
+
+  <h2>Blending</h2>
+  <p>
+    Whenever the top request changes, the director starts a blend from the camera's current output pose to the
+    new view. Because the blend starts from the current output, a blend that is interrupted by another request
+    continues from wherever the camera is, without a jump. Position and focus distance blend linearly, rotation
+    along the shortest arc, and field of view linearly. The very first view after play starts cuts in.
+  </p>
+  <p>The blend time is taken from the first of these that is set:</p>
+  <ol>
+    <li>the blend time passed when the previously shown request was released (for example a volume's
+      <code>BlendOut</code>);</li>
+    <li>the request's own blend time (0 or more; a negative value means "not set");</li>
+    <li>the new view's <code>BlendTime</code>, if above 0, with the view's <code>BlendCurve</code>;</li>
+    <li>the director's <code>BlendTime</code> and <code>BlendCurve</code>.</li>
+  </ol>
+  <p>A blend time of 0 or the Cut curve switches instantly.</p>
+
+  <h3>Sequence cuts</h3>
+  <p>
+    The director steps aside while a sequence shows its own camera. When another camera becomes Main View after
+    play started (a sequencer cut), the director sets its own camera's usage hint to None and writes nothing to
+    its object or camera. When that camera is no longer Main View, the director takes Main View back and blends
+    from the cut's last pose into whichever view is due, using its own <code>BlendTime</code> and
+    <code>BlendCurve</code>. Requests and volumes keep being tracked during the cut. Cameras that were already
+    Main View when play started are treated as part of the scene setup and do not make the director step aside.
+  </p>
+
+  <h2>Properties</h2>
+  <div class="tblwrap"><table>
+    <tr><th>Property</th><th>Default</th><th>Description</th></tr>
+    <tr><td><code>Player</code></td><td>0</td><td>Which local player this director serves (0&ndash;3). Only matters with several directors. Stats are published per player.</td></tr>
+    <tr><td><code>DefaultView</code></td><td>empty</td><td>Object with the player's own view. Empty uses a view on the director's object or its children.</td></tr>
+    <tr><td><code>BlendTime</code></td><td>0.6 s</td><td>Blend used when neither the request nor the view sets one, and when returning from a sequence cut.</td></tr>
+    <tr><td><code>BlendCurve</code></td><td>Ease In Out</td><td>Cut, Linear, Ease In, Ease Out or Ease In Out.</td></tr>
+    <tr><td><code>WriteFocus</code></td><td>on</td><td>Writes focus distances from views and the Focus modifier to the camera. When a focus distance is written, the camera's focus mode is set to Manual.</td></tr>
+    <tr><td><code>Modifiers</code></td><td>empty</td><td>Modifiers applied to every view, after the active view's own modifiers in each stage.</td></tr>
+  </table></div>
+  <div class="note">
+    <div class="nh">Note</div>
+    The director needs a Camera component on its own object to write field of view, near plane and focus.
+    Without one it only moves its object. A view whose <code>FieldOfView</code> is 0 shows the camera's own field
+    of view, read the first time the director updates after play starts.
+  </div>
+
+  <h2>Script API</h2>
+  <p>
+    These functions are reflected script functions on the Camera Director, so visual scripts and other script
+    languages can call them. Object names are paths or names searched relative to the director's object.
+  </p>
+  <div class="tblwrap"><table>
+    <tr><th>Function</th><th>Description</th></tr>
+    <tr><td><code>ActivateView(ViewObject, Priority, Duration, BlendTime)</code></td><td>Requests the view on <code>ViewObject</code> at <code>Priority</code>. <code>Duration</code> in seconds, 0 lasts until released. <code>BlendTime</code> in seconds; a negative value uses the view's or the director's blend, 0 cuts. Uses the director's <code>BlendCurve</code>. Returns the request id, or 0 (with a warning in the log) when no view is found.</td></tr>
+    <tr><td><code>ReleaseViewByName(ViewObject, BlendTime)</code></td><td>Releases every request for the view on <code>ViewObject</code>. If one of them was being shown, <code>BlendTime</code> is used for the change that follows; a negative value uses the normal blend rules.</td></tr>
+    <tr><td><code>ReleaseRequestById(RequestId)</code></td><td>Releases one request, using the normal blend rules for the change that follows.</td></tr>
+    <tr><td><code>SetPlayerViewByName(ViewObject)</code></td><td>Replaces the player's own view (priority 10).</td></tr>
+    <tr><td><code>AddTrauma(Trauma)</code></td><td>Adds trauma (0&ndash;1) to every Shake modifier in the active view's and the director's stacks.</td></tr>
+    <tr><td><code>AddRecoil(PitchDegrees, YawDegrees)</code></td><td>Kicks every Recoil modifier. Positive pitch kicks the aim up.</td></tr>
+    <tr><td><code>SetModifierEnabled(Name, Enabled)</code></td><td>Enables or disables the first modifier with that <code>Name</code>, searching the active view's <code>Modifiers</code> list first and then the director's.</td></tr>
+    <tr><td><code>SetModifierWeight(Name, Weight)</code></td><td>Sets the weight (0&ndash;1) of the first modifier with that <code>Name</code>, searching the active view's list first and then the director's.</td></tr>
+    <tr><td><code>LookAtObject(Object)</code></td><td>Frames the Camera Point Of Interest on <code>Object</code> through every Look At modifier, without the key press. Logs a warning when the object has no point of interest.</td></tr>
+    <tr><td><code>SetZoomed(Zoomed)</code></td><td>Holds every Zoom modifier zoomed in, or releases them.</td></tr>
+    <tr><td><code>SetLean(Lean)</code></td><td>Leans every Lean modifier: -1 fully left, 1 fully right, 0 upright.</td></tr>
+    <tr><td><code>IsBlending()</code></td><td>Whether the camera is blending between two views right now.</td></tr>
+  </table></div>
+  <div class="note">
+    <div class="nh">Note</div>
+    <code>SetModifierEnabled</code> and <code>SetModifierWeight</code> find the first match in the active view's
+    list, then in the director's. A modifier on a view that is not active is not found. Give each modifier you want to
+    address a unique <code>Name</code>.
+  </div>
+  <p>
+    C++ code has the same operations plus <code>RequestView</code>, <code>ReleaseRequest</code>,
+    <code>ReleaseView</code>, <code>SetPlayerView</code>, <code>GetActiveView</code>, <code>GetPlayerView</code>,
+    <code>GetOutputPose</code> and <code>GetBestPointOfInterest</code>. <code>plCameraWorldModule</code> finds the
+    director for a player (<code>FindDirector</code>) and sends an impulse to every director
+    (<code>PlayImpulse</code>).
+  </p>
+
+  <h2>Messages</h2>
+  <div class="tblwrap"><table>
+    <tr><th>Message</th><th>Send to</th><th>Fields</th></tr>
+    <tr><td><code>plMsgCameraRequestView</code></td><td>The director's object</td><td><code>m_hViewObject</code> (object with the view), <code>Priority</code> (50), <code>Duration</code> (0: until released), <code>BlendTime</code> (negative: default), <code>BlendCurve</code>, <code>Source</code> (Script). The director writes the new request id into <code>m_uiRequestId</code>.</td></tr>
+    <tr><td><code>plMsgCameraReleaseView</code></td><td>The director's object</td><td><code>RequestId</code>: releases that request when set; otherwise every request for <code>m_hViewObject</code>. <code>BlendTime</code> (negative: default).</td></tr>
+    <tr><td><code>plMsgCameraImpulse</code></td><td>The director's object, or every director through <code>plCameraWorldModule::PlayImpulse</code></td><td><code>Type</code> (Shake, Recoil, Landing), <code>Strength</code> (0.5; Shake: trauma, Landing: fall speed in m/s), <code>Position</code> and <code>Radius</code> (Shake falloff, 0 = none), <code>Pitch</code> and <code>Yaw</code> (Recoil). Delivered to the enabled modifiers of the active view and the director.</td></tr>
+    <tr><td><code>plMsgCameraPointOfInterestChanged</code></td><td>Sent by the Look At modifier as an event message to the view's subject (the player) and up its hierarchy</td><td><code>m_hPointOfInterest</code> (invalid when nothing is in range), <code>DisplayName</code>. See <a href="Framing.html#lookat">Look At</a>.</td></tr>
+  </table></div>
+  <p>
+    <code>Source</code> on a request is one of Player, Volume, Script or Sequence. It only shows in the debug
+    overlay.
+  </p>
+
+  <h2 id="volumes">Camera Volumes</h2>
+  <p>
+    A Camera Volume (<code>plCameraVolumeComponent</code>) is a box or sphere that shows a view while the player
+    is inside it. Every director tests its player view's subject point against every active volume each frame;
+    without a player view it tests the director's own position. Entering requests the volume's view at the
+    volume's priority with <code>BlendIn</code>; leaving releases it with <code>BlendOut</code>. The shape follows
+    the volume object's position, rotation and scale.
+  </p>
+  <div class="tblwrap"><table>
+    <tr><th>Property</th><th>Default</th><th>Description</th></tr>
+    <tr><td><code>View</code></td><td>empty</td><td>Object with the view to show.</td></tr>
+    <tr><td><code>Shape</code></td><td>Box</td><td>Box or Sphere.</td></tr>
+    <tr><td><code>HalfExtents</code></td><td>(2, 2, 2)</td><td>Half size of the box, in the object's space.</td></tr>
+    <tr><td><code>Radius</code></td><td>2</td><td>Radius of the sphere.</td></tr>
+    <tr><td><code>Priority</code></td><td>20</td><td>Priority of the request made on entering.</td></tr>
+    <tr><td><code>BlendIn</code></td><td>0.6 s</td><td>Blend to the volume's view on entering.</td></tr>
+    <tr><td><code>BlendOut</code></td><td>0.6 s</td><td>Blend away from the volume's view on leaving, if it was being shown.</td></tr>
+    <tr><td><code>BlendCurve</code></td><td>Ease In Out</td><td>Curve for the blend in.</td></tr>
+  </table></div>
+  <p>The editor draws the box or sphere in gold and offers manipulators for its size.</p>
+
+  <h3>Switching to a fixed camera in a courtyard</h3>
+  <ol class="steps">
+    <li>Place an object where the courtyard camera should be and add a <b>Fixed View</b>. Set its
+      <code>Target</code> to the player, or leave it empty for a fixed angle.</li>
+    <li>Create an object covering the courtyard and add a <b>Camera Volume</b>. Set <code>HalfExtents</code> to
+      the courtyard's size and <code>View</code> to the Fixed View's object.</li>
+    <li>Keep <code>Priority</code> at 20 so it beats the player view, or raise it if volumes overlap.</li>
+    <li>Play and walk in. The camera blends to the fixed view over <code>BlendIn</code> and back over
+      <code>BlendOut</code> when you leave.</li>
+  </ol>
+
+  <h3>Playing a timed shot from script</h3>
+  <ol class="steps">
+    <li>Place a view for the shot, for example a Rail View with a spline along a bridge, and name its object
+      <code>BridgeShot</code>.</li>
+    <li>From a script with access to the Camera Director, call <code>ActivateView("BridgeShot", 100, 5, 1)</code>:
+      priority 100, five seconds, one-second blend in.</li>
+    <li>The request ends by itself after five seconds and the camera blends back to the player view with the
+      normal blend rules. To end it early, call <code>ReleaseRequestById</code> with the returned id, or
+      <code>ReleaseViewByName("BridgeShot", 0.5)</code> for a half-second blend back.</li>
+  </ol>
+
+  <h2 id="debugging">Debugging</h2>
+  <h3>Cameras.Debug</h3>
+  <div class="tblwrap"><table>
+    <tr><th>Value</th><th>Shows</th></tr>
+    <tr><td><code>0</code></td><td>Nothing (default).</td></tr>
+    <tr><td><code>1</code></td><td>A text overlay in the top left of the game view per director: the player index; every request with its view name, source, priority and, for the active one (marked <code>&gt;</code>), the blend progress; every modifier of the active view and the director with its type, owner, whether it is disabled (<code>x</code>) and its current contribution; and the output field of view, yaw, pitch and aspect ratio.</td></tr>
+    <tr><td><code>2</code></td><td>Everything from 1, plus the active view's rig (arm, sweep, frustums) and the framing guides: the rule-of-thirds grid, the dead and soft zones around the anchor and a cross at the subject.</td></tr>
+  </table></div>
+
+  <h3>Stats</h3>
+  <p>Each director publishes a stats group, where <code>N</code> is its <code>Player</code> index:</p>
+  <div class="tblwrap"><table>
+    <tr><th>Stat</th><th>Value</th></tr>
+    <tr><td><code>Cameras/PlayerN/View</code></td><td>Name of the active view's object.</td></tr>
+    <tr><td><code>Cameras/PlayerN/Blend</code></td><td>Blend progress, 0 to 1. 1 means no blend is running.</td></tr>
+    <tr><td><code>Cameras/PlayerN/FieldOfView</code></td><td>Output field of view in degrees, before the player's offset.</td></tr>
+  </table></div>
+
+  <h2>Troubleshooting</h2>
+  <div class="tblwrap"><table>
+    <tr><th>Symptom</th><th>Likely cause</th></tr>
+    <tr><td>Nothing happens after adding a director</td><td>No player view was found (see the order above) and no other request is open. Set <code>DefaultView</code>.</td></tr>
+    <tr><td>A view placed in the world moves its own object</td><td>The world has no active director, so views run in standalone mode.</td></tr>
+    <tr><td>The camera moves but the field of view and focus never change</td><td>The director's object has no Camera component.</td></tr>
+    <tr><td><code>ActivateView</code> returns 0</td><td>The object name did not resolve, or the object has no view. The log shows a warning with the name.</td></tr>
+    <tr><td>A scripted view never shows</td><td>Its priority is below 10, or a higher-priority request (for example a volume) is open. Check <code>Cameras.Debug 1</code>.</td></tr>
+    <tr><td>A volume does not trigger</td><td>The player view's subject point is not inside it (for a third-person view that is halfway between the target offsets), or <code>View</code> is not set.</td></tr>
+    <tr><td><code>SetModifierWeight</code> has no effect</td><td>Its <code>Name</code> does not match, or it is on a view that is not active right now.</td></tr>
+    <tr><td>The camera freezes during a cutscene</td><td>A sequence camera is Main View; the director has stepped aside on purpose and takes over again when the cut ends.</td></tr>
+  </table></div>
+
+  <div class="seealso"><b>See also:</b>
+    <a href="index.html">Gameplay Cameras</a> &middot;
+    <a href="Views.html">Camera Views</a> &middot;
+    <a href="Modifiers.html">The Modifier Stack</a> &middot;
+    <a href="Framing.html">Framing, Look At and Focus</a>
+  </div>
+</div>
+</body>
+</html>

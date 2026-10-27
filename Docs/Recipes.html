@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Common Camera Setups — PlasmaEngine2 Manual</title>
+<style>
+  :root {
+    --bg: #0f141a; --panel: #161d25; --panel2: #1b242e; --ink: #dbe4ec; --muted: #8698a9;
+    --line: #263442; --accent: #7cc3d9; --amber: #d9a35c; --ok: #79c98f; --code-bg: #10171e;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: "Segoe UI", system-ui, sans-serif; font-size: 15.5px; line-height: 1.65; }
+  a { color: var(--accent); }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 44px 28px 90px; }
+  h1, h2, h3, .crumbs { font-family: "Bahnschrift", "Arial Narrow", sans-serif; }
+  .crumbs { text-transform: uppercase; letter-spacing: 0.14em; font-size: 12px; color: var(--muted); margin: 0 0 10px; }
+  .crumbs a { color: var(--muted); }
+  h1 { font-size: 34px; margin: 0 0 14px; }
+  h2 { font-size: 22px; letter-spacing: 0.02em; margin: 46px 0 10px; text-transform: uppercase; }
+  h3 { font-size: 17px; margin: 26px 0 6px; }
+  p, li { max-width: 78ch; }
+  code { font-family: "Cascadia Code", "Consolas", monospace; font-size: 0.86em; background: var(--code-bg); border: 1px solid var(--line); padding: 1px 5px; border-radius: 2px; }
+  pre { font-family: "Cascadia Code", "Consolas", monospace; font-size: 13px; background: var(--code-bg); border: 1px solid var(--line); border-radius: 3px; padding: 12px 16px; overflow-x: auto; max-width: 78ch; }
+  table { border-collapse: collapse; width: 100%; background: var(--panel); }
+  .tblwrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 3px; margin: 16px 0; }
+  th { text-align: left; font-family: "Bahnschrift", "Arial Narrow", sans-serif; font-size: 12.5px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); padding: 9px 13px; border-bottom: 2px solid var(--line); background: var(--panel2); }
+  td { padding: 9px 13px; border-bottom: 1px solid var(--line); vertical-align: top; font-size: 14px; }
+  td:first-child { white-space: nowrap; }
+  tr:last-child td { border-bottom: none; }
+  .note { border-left: 3px solid var(--accent); background: var(--panel); padding: 10px 16px; margin: 16px 0; font-size: 14px; max-width: 78ch; }
+  .note.warn { border-left-color: var(--amber); }
+  .note .nh { font-family: "Bahnschrift", "Arial Narrow", sans-serif; font-size: 11.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 2px; }
+  ol.steps li { margin: 8px 0; }
+  .seealso { margin-top: 48px; border-top: 1px dashed var(--line); padding-top: 16px; font-size: 14px; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="crumbs"><a href="index.html">Manual</a> / <a href="index.html">Gameplay Cameras</a> / Common Setups</p>
+  <h1>Common Camera Setups</h1>
+
+  <p>
+    This page walks through complete camera setups for common kinds of games. Each one lists the components you
+    need, where they go and the property values that give the effect, so you can build it from scratch or use it as
+    a starting point. Every property is described in full on the reference pages:
+    <a href="Views.html">Views</a>, <a href="Director.html">Director</a>,
+    <a href="Modifiers.html">Modifiers</a> and <a href="Framing.html">Framing</a>.
+  </p>
+  <p>
+    All setups start from the same base, described once below. Input action names such as <code>Aim</code> or
+    <code>LockOn</code> must exist in the project's input action map and be bound to keys and buttons.
+  </p>
+
+  <div class="tblwrap"><table>
+    <tr><th>Setup</th><th>Good for</th></tr>
+    <tr><td><a href="#base">The base setup</a></td><td>Every setup on this page.</td></tr>
+    <tr><td><a href="#shoulder">Over-the-shoulder action camera</a></td><td>Third-person shooters and action games.</td></tr>
+    <tr><td><a href="#explore">Exploration camera</a></td><td>Adventure and platforming games where the player mostly moves.</td></tr>
+    <tr><td><a href="#fps">First-person shooter</a></td><td>First-person games with aiming, leaning and weapon feedback.</td></tr>
+    <tr><td><a href="#lockon">Melee lock-on</a></td><td>Action games with bosses and duels.</td></tr>
+    <tr><td><a href="#rooms">Fixed camera per room</a></td><td>Horror and puzzle games with authored camera angles.</td></tr>
+    <tr><td><a href="#rail">Side-on rail camera</a></td><td>Corridors, chases and side-scrolling sections.</td></tr>
+    <tr><td><a href="#topdown">Top-down camera</a></td><td>Strategy, management and twin-stick games.</td></tr>
+    <tr><td><a href="#shot">Scripted shot and dialogue</a></td><td>Story beats, reveals and conversations.</td></tr>
+    <tr><td><a href="#shake">Explosions and shaking areas</a></td><td>Any game.</td></tr>
+  </table></div>
+
+  <h2 id="base">The base setup</h2>
+  <p>
+    The base setup is one Camera Director next to the scene's Main View camera, and one player view on the
+    character. Build it once, then add the pieces each setup lists.
+  </p>
+  <ol class="steps">
+    <li>Add the Gameplay Cameras package to the project in the package manager.</li>
+    <li>Create an object named <code>Camera</code>. Add a <b>Camera</b> component with Usage Hint
+      <b>Main View</b>, then a <b>Camera Director</b> on the same object.</li>
+    <li>Make sure the player character has a <code>plInputComponent</code> that uses the project's input action
+      map. Views and modifiers read their actions through it.</li>
+    <li>Under the character, create a child object for the player view and add the view the setup asks for.</li>
+    <li>Set the director's <code>DefaultView</code> to that child object.</li>
+    <li>Play, and run <code>Cameras.Debug 1</code> in the console. The player view should be the only request,
+      at priority 10.</li>
+  </ol>
+  <div class="note">
+    <div class="nh">Note</div>
+    Modifiers can go in the director's <code>Modifiers</code> list, where they apply to every view, or in a view's
+    own list, where they apply only while that view is showing. Put effects the player always feels, such as shake,
+    on the director. Put effects that belong to one view, such as head bob on a first-person view, on that view.
+  </div>
+
+  <h2 id="shoulder">Over-the-shoulder action camera</h2>
+  <p>
+    A close third-person camera offset to one side, so the character does not block the crosshair. The player can
+    swap shoulders, aiming pulls the camera in and narrows the view, and shots kick the aim up.
+  </p>
+  <div class="tblwrap"><table>
+    <tr><th>Where</th><th>Component or modifier</th><th>Settings</th></tr>
+    <tr><td>Player view</td><td>Third Person View</td><td><code>TargetOffsetLow</code> (0, 0, 1.3), <code>TargetOffsetHigh</code> (0, 0, 1.6), <code>MaxDistance</code> 2.2, <code>ShoulderOffset</code> 0.5, <code>ShoulderSwapAction</code> <code>SwapShoulder</code>, and <code>LookInput</code> &rarr; <code>LookAction</code> set to the look action.</td></tr>
+    <tr><td>Director</td><td>Damping</td><td>Defaults. Smooths the small jitter of a moving character.</td></tr>
+    <tr><td>Director</td><td>Zoom</td><td><code>Action</code> <code>Aim</code>, <code>FovScale</code> 0.65, <code>ArmPull</code> 0.45, <code>LookScale</code> 0.5.</td></tr>
+    <tr><td>Director</td><td>Recoil</td><td>Defaults.</td></tr>
+    <tr><td>Director</td><td>Shake</td><td>Defaults, <code>Name</code> <code>Shake</code>.</td></tr>
+  </table></div>
+  <ol class="steps">
+    <li>Build the <a href="#base">base setup</a> with a Third Person View and the settings above.</li>
+    <li>Add the modifiers to the director in the order shown. Order matters within a stage: with Damping first, it
+      smooths the view's movement but not the recoil kick that follows.</li>
+    <li>From the weapon script, call <code>AddRecoil(2.5, 0.3)</code> on the director for each shot. Vary the
+      yaw a little per shot if you want the aim to wander.</li>
+    <li>Play. Hold the aim button: the camera moves in and the field of view narrows over 0.15 seconds. Press the
+      swap action to move the camera to the other shoulder.</li>
+  </ol>
+  <h3>Tuning</h3>
+  <ul>
+    <li>For a tighter feel when aiming, lower <code>FovScale</code> to 0.5. To slow the look speed less while
+      aiming, raise <code>LookScale</code>.</li>
+    <li>To center the character when not aiming, set <code>ShoulderOffset</code> to 0 and change it from script
+      while aiming. Changes ease in.</li>
+  </ul>
+
+  <h2 id="explore">Exploration camera</h2>
+  <p>
+    A relaxed third-person camera for a game where the player spends most of the time moving. The character can
+    drift inside a dead zone before the camera follows, the camera swings back behind the character when the
+    player stops steering, and it slowly turns toward landmarks nearby.
+  </p>
+  <div class="tblwrap"><table>
+    <tr><th>Where</th><th>Component or modifier</th><th>Settings</th></tr>
+    <tr><td>Player view</td><td>Third Person View</td><td><code>MaxDistance</code> 4.5, <code>AutoRecenter</code> on, <code>RecenterDelay</code> 2.5 s, <code>LookAhead</code> 1.5, <code>PositionLag</code> 0.1 s.</td></tr>
+    <tr><td>Director</td><td>Composition</td><td><code>SoloPoint</code> Leading Room, <code>DeadZone</code> (0.12, 0.10), <code>SoftZone</code> 0.55.</td></tr>
+    <tr><td>Director</td><td>Look Hint</td><td><code>Speed</code> 6&deg;, <code>IdleTime</code> 2 s.</td></tr>
+    <tr><td>Each landmark</td><td>Camera Point Of Interest</td><td><code>ActivationRadius</code> to taste.</td></tr>
+  </table></div>
+  <ol class="steps">
+    <li>Build the <a href="#base">base setup</a> with a Third Person View and the settings above.</li>
+    <li>Add Composition and Look Hint to the director's <code>Modifiers</code> list.</li>
+    <li>Add a Camera Point Of Interest to each landmark the camera should drift toward.</li>
+    <li>Play and run around. With Leading Room, the character sits on the third of the screen behind its direction
+      of travel, leaving room ahead. Stop steering near a landmark and the camera turns toward it.</li>
+  </ol>
+  <h3>Tuning</h3>
+  <ul>
+    <li>Use <code>SoloPoint</code> Center for a classic centered character.</li>
+    <li>A bigger <code>DeadZone</code> makes the camera calmer; a smaller one follows more tightly.</li>
+    <li>While the player steers, Composition follows the camera's new aim instead of pulling the character back to
+      its point. It frames the character again once steering stops.</li>
+  </ul>
+
+  <h2 id="fps">First-person shooter</h2>
+  <p>
+    A first-person camera at the character's eyes, with head bob while walking, a dip on landing, leaning round
+    corners, aim-down-sights zoom, a wider view while sprinting, and recoil.
+  </p>
+  <div class="tblwrap"><table>
+    <tr><th>Where</th><th>Component or modifier</th><th>Settings</th></tr>
+    <tr><td>Player view, under the head object</td><td>First Person View</td><td><code>LookInput</code> set up for pitch, <code>NearPlane</code> 0.05, <code>MaxPitch</code> 85&deg;.</td></tr>
+    <tr><td>Player view</td><td>Head Bob</td><td>Defaults, <code>Name</code> <code>HeadBob</code>.</td></tr>
+    <tr><td>Player view</td><td>Landing</td><td>Defaults.</td></tr>
+    <tr><td>Player view</td><td>Lean</td><td><code>LeanLeftAction</code> <code>LeanLeft</code>, <code>LeanRightAction</code> <code>LeanRight</code>, <code>MaxRoll</code> 10&deg;, <code>SideOffset</code> 0.35, <code>CollisionLayer</code> the layer walls are on.</td></tr>
+    <tr><td>Director</td><td>Zoom</td><td><code>Action</code> <code>Aim</code>, <code>FovScale</code> 0.6.</td></tr>
+    <tr><td>Director</td><td>FOV Kick</td><td><code>SpeedThreshold</code> 5, <code>FullSpeed</code> 8, <code>MaxKick</code> 8.</td></tr>
+    <tr><td>Director</td><td>Recoil</td><td>Defaults.</td></tr>
+    <tr><td>Director</td><td>Shake</td><td>Defaults.</td></tr>
+    <tr><td>Director</td><td>Focus</td><td><code>Target</code> Crosshair. Only needed with depth of field.</td></tr>
+  </table></div>
+  <ol class="steps">
+    <li>Follow <a href="Views.html">Setting up a first-person camera on a character with a head object</a>.</li>
+    <li>Add Head Bob, Landing and Lean to the view's own <code>Modifiers</code> list.</li>
+    <li>Add Zoom, FOV Kick, Recoil, Shake and Focus to the director's list, in that order.</li>
+    <li>From the weapon script, call <code>AddRecoil(1.5, 0)</code> on the director for each shot.</li>
+    <li>Play. Walk to see the head bob and jump off a ledge to see the landing dip. Lean next to a wall: the camera
+      tilts but stops moving sideways before it reaches the wall.</li>
+  </ol>
+  <h3>Tuning</h3>
+  <ul>
+    <li>Some players feel unwell with head bob. Offer a slider in the options menu and pass its value to
+      <code>SetModifierWeight("HeadBob", value)</code> on the director while the first-person view is showing.</li>
+    <li>Head Bob and Landing need a character controller on the subject, so they know when it is in the air. See
+      <a href="Modifiers.html">Landing</a>.</li>
+    <li>For VR, leave <code>AllowInXR</code> off on rotational effects such as Shake and Lean.</li>
+  </ul>
+
+  <h2 id="lockon">Melee lock-on</h2>
+  <p>
+    The player presses a button to lock onto an enemy. The camera then keeps the player lower left and the enemy
+    center right, and another button switches to the next enemy.
+  </p>
+  <div class="tblwrap"><table>
+    <tr><th>Where</th><th>Component or modifier</th><th>Settings</th></tr>
+    <tr><td>Player view</td><td>Third Person View</td><td><code>MaxDistance</code> 4.</td></tr>
+    <tr><td>Director</td><td>Composition</td><td>Defaults. Lock-On frames through it.</td></tr>
+    <tr><td>Director</td><td>Lock-On</td><td><code>Action</code> <code>LockOn</code>, <code>SwitchAction</code> <code>SwitchTarget</code>, <code>MaxDistance</code> 20, <code>TargetOffset</code> (0, 0, 1.4).</td></tr>
+    <tr><td>Each enemy</td><td>Tag</td><td>The tag <code>LockOnTarget</code> on an object with a mesh or other rendered component.</td></tr>
+  </table></div>
+  <ol class="steps">
+    <li>Build the <a href="#base">base setup</a> with a Third Person View.</li>
+    <li>Add Composition, then Lock-On, to the director's <code>Modifiers</code> list.</li>
+    <li>Give each enemy prefab the <code>LockOnTarget</code> tag.</li>
+    <li>Play, face an enemy and press the lock-on button. The enemy nearest the center of the screen is picked.
+      Press the button again to release, or move more than 24 meters away (1.2 &times; <code>MaxDistance</code>).</li>
+  </ol>
+  <h3>Tuning</h3>
+  <ul>
+    <li>For a large boss, raise <code>TargetOffset</code> to its chest or head height.</li>
+    <li>To lock only while the button is held, turn <code>Toggle</code> off.</li>
+    <li>When the locked enemy's object is deleted, the modifier picks the next target, or releases the lock when
+      there is none.</li>
+  </ul>
+
+  <h2 id="rooms">Fixed camera per room</h2>
+  <p>
+    Each room has its own authored camera angle. Walking into a room cuts or blends to its camera, which turns to
+    keep the player in view. Outside every room the player's own camera returns.
+  </p>
+  <div class="tblwrap"><table>
+    <tr><th>Where</th><th>Component or modifier</th><th>Settings</th></tr>
+    <tr><td>Player view</td><td>Third Person View</td><td>Any. Used between rooms.</td></tr>
+    <tr><td>An object per room, at the camera position</td><td>Fixed View</td><td><code>Target</code> the player, <code>TargetOffset</code> (0, 0, 1.2), <code>TrackingSmoothing</code> 0.3 s, <code>FieldOfView</code> 50.</td></tr>
+    <tr><td>An object per room, covering the floor</td><td>Camera Volume</td><td><code>View</code> the room's Fixed View, <code>HalfExtents</code> the room's size, <code>BlendIn</code> 0, <code>BlendOut</code> 0.</td></tr>
+  </table></div>
+  <ol class="steps">
+    <li>Build the <a href="#base">base setup</a>.</li>
+    <li>For each room, place an object high in a corner, facing into the room, and add a Fixed View.</li>
+    <li>Add a Camera Volume that covers the room and set its <code>View</code> to the room's Fixed View.</li>
+    <li>Play and walk from room to room. With <code>BlendIn</code> and <code>BlendOut</code> at 0 the camera cuts;
+      raise them for a blend instead.</li>
+  </ol>
+  <h3>Tuning</h3>
+  <ul>
+    <li>Let room volumes overlap a little at doorways. They have the same priority, so the newest request wins: the
+      camera switches as soon as the player steps into the next room and stays there until they leave it.</li>
+    <li>Turn on <code>FrameTarget</code> to zoom in when the player is far from the camera, so they keep the same
+      size on screen. <code>FrameSize</code> sets how tall an area is framed.</li>
+    <li>Leave <code>Target</code> empty for a completely static angle.</li>
+  </ul>
+
+  <h2 id="rail">Side-on rail camera</h2>
+  <p>
+    The camera rides along a track beside a corridor, staying level with the player and looking at them, as in a
+    side-scrolling section or a chase.
+  </p>
+  <div class="tblwrap"><table>
+    <tr><th>Where</th><th>Component or modifier</th><th>Settings</th></tr>
+    <tr><td>Track object</td><td>Spline</td><td>A spline parallel to the corridor, a few meters to the side.</td></tr>
+    <tr><td>Rail camera object</td><td>Rail View</td><td><code>Spline</code> the track object, <code>Target</code> the player, <code>Mode</code> Closest To Target, <code>RailSmoothing</code> 0.3 s.</td></tr>
+    <tr><td>Corridor</td><td>Camera Volume</td><td><code>View</code> the Rail View.</td></tr>
+  </table></div>
+  <ol class="steps">
+    <li>Build the <a href="#base">base setup</a>.</li>
+    <li>Draw a spline beside the corridor at about head height, and add a Rail View that uses it.</li>
+    <li>Cover the corridor with a Camera Volume that shows the Rail View.</li>
+    <li>Play and run down the corridor. The camera keeps to the point on the track closest to the player.</li>
+  </ol>
+  <h3>Tuning</h3>
+  <ul>
+    <li>Set <code>KeyOffset</code> to a small value so the camera leads the player and shows more of what is ahead.
+      Whether that is a positive or negative value depends on which way the spline runs.</li>
+    <li>For a chase that plays out the same way every time, set <code>Mode</code> to Scripted and move the camera
+      with <code>SetRailKey</code> from a script or sequence.</li>
+  </ul>
+  <div class="note warn">
+    <div class="nh">Note</div>
+    Use the Rail View through a Camera Director. In standalone mode it moves its own object, so it must not be on
+    the player or the spline object.
+  </div>
+
+  <h2 id="topdown">Top-down camera</h2>
+  <p>
+    A camera high above the player at a fixed angle, with zoom levels, rotation in 90&deg; steps and panning, for
+    strategy or twin-stick games.
+  </p>
+  <div class="tblwrap"><table>
+    <tr><th>Where</th><th>Component or modifier</th><th>Settings</th></tr>
+    <tr><td>An object of its own</td><td>Top-Down View</td><td><code>Target</code> the player, <code>Pitch</code> 55&deg;, <code>ZoomDistances</code> 8, 14, 22, the four zoom and rotate actions, <code>PanAction</code>, <code>GroundFollow</code> on.</td></tr>
+  </table></div>
+  <ol class="steps">
+    <li>Build the <a href="#base">base setup</a>, but put the Top-Down View on an object of its own rather than
+      under the character, so it does not turn with the character. Set its <code>Target</code> to the character and
+      make it the director's <code>DefaultView</code>.</li>
+    <li>Bind the zoom, rotate and pan actions in the input action map. <code>PanAction</code> is a vector action,
+      for example WASD or a stick.</li>
+    <li>Play. Zoom between the three distances, rotate in steps, and pan up to <code>MaxPan</code> meters from the
+      player. Call <code>ResetPan</code> from script to move back onto the player.</li>
+  </ol>
+  <h3>Tuning</h3>
+  <ul>
+    <li>For mouse-driven strategy games, turn on <code>EdgeScroll</code>.</li>
+    <li><code>GroundFollow</code> keeps the camera at the same height above hills and stairs.</li>
+    <li>A higher <code>Pitch</code> looks more straight down; around 35&deg; gives a more cinematic angle.</li>
+  </ul>
+
+  <h2 id="shot">Scripted shot and dialogue</h2>
+  <p>
+    A story beat: the camera blends to an authored shot, then back to the player. For a conversation, the shot
+    frames the player and the person they are talking to.
+  </p>
+  <div class="tblwrap"><table>
+    <tr><th>Where</th><th>Component or modifier</th><th>Settings</th></tr>
+    <tr><td>Shot object, named <code>DialogueShot</code></td><td>Fixed View</td><td><code>Target</code> the person speaking, <code>BlendTime</code> 1 s, <code>BlendCurve</code> Ease In Out.</td></tr>
+    <tr><td>Shot view</td><td>Composition</td><td>For a two-shot: one entry under <code>Subjects</code> whose <code>Object</code> is the player, <code>Layout</code> Thirds Horizontal.</td></tr>
+    <tr><td>Director</td><td>Focus</td><td><code>Target</code> Subject, <code>PullTime</code> 0.4 s. Only needed with depth of field.</td></tr>
+  </table></div>
+  <ol class="steps">
+    <li>Build the <a href="#base">base setup</a>.</li>
+    <li>Place the shot object where the camera should be, facing the speakers, and add a Fixed View.</li>
+    <li>For a two-shot, add a Composition modifier to the shot's own <code>Modifiers</code> list and add the player
+      under <code>Subjects</code>.</li>
+    <li>From the script that starts the conversation, call <code>ActivateView("DialogueShot", 100, 0, -1)</code> on
+      the director. Priority 100 beats volumes and the player view, duration 0 holds until released, and blend time
+      -1 uses the view's <code>BlendTime</code>.</li>
+    <li>When the conversation ends, call <code>ReleaseViewByName("DialogueShot", 1)</code>. The camera blends back to
+      the player over one second.</li>
+  </ol>
+  <h3>Tuning</h3>
+  <ul>
+    <li>For a reveal that ends by itself, pass a duration, for example
+      <code>ActivateView("RevealShot", 100, 4, 1.5)</code>.</li>
+    <li>To glance at something without leaving the player's camera, give it a Camera Point Of Interest and call
+      <code>LookAtObject</code> on the director. See <a href="Framing.html">Press F to look at a shrine</a>.</li>
+    <li><code>IsBlending()</code> tells a script when the blend has finished, for example to start the first line
+      of dialogue.</li>
+    <li>A sequence that cuts to its own Main View camera takes over by itself: the director steps aside while the
+      sequence camera is showing and blends back afterwards.</li>
+  </ul>
+
+  <h2 id="shake">Explosions and shaking areas</h2>
+  <p>
+    Explosions shake the camera more the closer it is, and some areas, such as a rumbling engine room, shake
+    constantly.
+  </p>
+  <div class="tblwrap"><table>
+    <tr><th>Where</th><th>Component or modifier</th><th>Settings</th></tr>
+    <tr><td>Director</td><td>Shake</td><td><code>UseShakeVolumes</code> on (the default).</td></tr>
+    <tr><td>Explosion prefab</td><td>Camera Shake Volume Sphere</td><td><code>Strength</code> 1, <code>Radius</code> 15, <code>BurstDuration</code> 0.4 s, <code>OnFinishedAction</code> Delete Component.</td></tr>
+    <tr><td>Engine room</td><td>Camera Shake Volume Sphere</td><td><code>Strength</code> 0.25, <code>Radius</code> 10, <code>BurstDuration</code> 0.</td></tr>
+  </table></div>
+  <ol class="steps">
+    <li>Build the <a href="#base">base setup</a> and add a Shake modifier to the director.</li>
+    <li>Add a Camera Shake Volume Sphere to the explosion prefab with the burst settings above. Each explosion now
+      shakes the camera briefly, less toward the edge of the radius.</li>
+    <li>Add a constant Camera Shake Volume Sphere to the engine room.</li>
+    <li>For a hit that should shake at any distance, call <code>AddTrauma(0.5)</code> on the director.</li>
+  </ol>
+  <h3>Tuning</h3>
+  <ul>
+    <li>Trauma is squared before it moves the camera, so small values stay subtle and big hits stand out.
+      <code>TraumaDecay</code> sets how fast it settles.</li>
+    <li>Shake volumes are measured at the camera, not at the player. A volume the player is inside but the camera
+      is outside does not shake.</li>
+    <li>When gameplay code already knows where a hit happened, send a <code>plMsgCameraImpulse</code> with Type
+      Shake, a <code>Position</code>, a <code>Radius</code> and a <code>Strength</code> instead of placing a
+      volume.</li>
+  </ul>
+
+  <div class="seealso"><b>See also:</b>
+    <a href="index.html">Gameplay Cameras</a> &middot;
+    <a href="Views.html">Camera Views</a> &middot;
+    <a href="Director.html">Camera Director</a> &middot;
+    <a href="Modifiers.html">The Modifier Stack</a> &middot;
+    <a href="Framing.html">Framing, Look At and Focus</a>
+  </div>
+</div>
+</body>
+</html>

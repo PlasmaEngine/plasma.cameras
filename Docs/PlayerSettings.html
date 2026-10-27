@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Player Look Settings and Look Input — PlasmaEngine2 Manual</title>
+<style>
+  :root {
+    --bg: #0f141a; --panel: #161d25; --panel2: #1b242e; --ink: #dbe4ec; --muted: #8698a9;
+    --line: #263442; --accent: #7cc3d9; --amber: #d9a35c; --ok: #79c98f; --code-bg: #10171e;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: "Segoe UI", system-ui, sans-serif; font-size: 15.5px; line-height: 1.65; }
+  a { color: var(--accent); }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 44px 28px 90px; }
+  h1, h2, h3, .crumbs { font-family: "Bahnschrift", "Arial Narrow", sans-serif; }
+  .crumbs { text-transform: uppercase; letter-spacing: 0.14em; font-size: 12px; color: var(--muted); margin: 0 0 10px; }
+  .crumbs a { color: var(--muted); }
+  h1 { font-size: 34px; margin: 0 0 14px; }
+  h2 { font-size: 22px; letter-spacing: 0.02em; margin: 46px 0 10px; text-transform: uppercase; }
+  h3 { font-size: 17px; margin: 26px 0 6px; }
+  p, li { max-width: 78ch; }
+  code { font-family: "Cascadia Code", "Consolas", monospace; font-size: 0.86em; background: var(--code-bg); border: 1px solid var(--line); padding: 1px 5px; border-radius: 2px; }
+  table { border-collapse: collapse; width: 100%; background: var(--panel); }
+  .tblwrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 3px; margin: 16px 0; }
+  th { text-align: left; font-family: "Bahnschrift", "Arial Narrow", sans-serif; font-size: 12.5px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); padding: 9px 13px; border-bottom: 2px solid var(--line); background: var(--panel2); }
+  td { padding: 9px 13px; border-bottom: 1px solid var(--line); vertical-align: top; font-size: 14px; }
+  td:first-child { white-space: nowrap; }
+  tr:last-child td { border-bottom: none; }
+  .note { border-left: 3px solid var(--accent); background: var(--panel); padding: 10px 16px; margin: 16px 0; font-size: 14px; max-width: 78ch; }
+  .note.warn { border-left-color: var(--amber); }
+  .note .nh { font-family: "Bahnschrift", "Arial Narrow", sans-serif; font-size: 11.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 2px; }
+  ol.steps li { margin: 8px 0; }
+  .seealso { margin-top: 48px; border-top: 1px dashed var(--line); padding-top: 16px; font-size: 14px; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="crumbs"><a href="index.html">Manual</a> / <a href="index.html">Gameplay Cameras</a> / Player Settings</p>
+  <h1>Player Look Settings and Look Input</h1>
+
+  <p>
+    Two things decide how the camera answers the player's hands. The <b>player look settings</b> are the player's
+    own preferences (sensitivity, invert Y, field-of-view offset and framing assist), stored with their input
+    bindings so an options menu can change them. The <b>look input</b> on each view names the input actions that
+    turn it.
+  </p>
+
+  <h2>Player look settings</h2>
+  <p>
+    <code>plCameraPlayerSettings</code> reads the settings from the running game application's input bindings
+    every frame, so a change in an options menu applies at once. The values are stored as named values in
+    <code>InputBindings.ddl</code>, in the same settings folder as <code>GameSettings.ddl</code>, next to the
+    player's rebinding overrides. When there is no game application, the defaults below are used.
+  </p>
+  <div class="tblwrap"><table>
+    <tr><th>Key</th><th>Default</th><th>Description</th></tr>
+    <tr><td><code>Camera.LookSensitivity</code></td><td>1</td><td>Multiplier on all look input of first- and third-person views. Values below 0 count as 0.</td></tr>
+    <tr><td><code>Camera.InvertY</code></td><td>0</td><td>Values above 0.5 invert vertical look input.</td></tr>
+    <tr><td><code>Camera.FieldOfViewOffset</code></td><td>0</td><td>Degrees added to every field of view written to the camera, by the director and by standalone views. The result is kept between 1&deg; and 170&deg;.</td></tr>
+    <tr><td><code>Camera.MouseAssist</code></td><td>0</td><td>How strongly Composition may turn a first- or third-person camera while the player uses keyboard and mouse (0&ndash;1).</td></tr>
+    <tr><td><code>Camera.GamepadAssist</code></td><td>1</td><td>The same while the player uses any other input scheme (0&ndash;1).</td></tr>
+  </table></div>
+  <p>
+    The assist value in effect follows the input scheme the player is using right now, so switching from mouse
+    to gamepad mid-game switches the assist too. Assist only scales Composition's soft-zone correction; the
+    soft-zone edge always holds. See <a href="Framing.html">Framing</a>.
+  </p>
+
+  <h3>Changing the settings from game code</h3>
+  <div class="tblwrap"><table>
+    <tr><th>Call</th><th>Sets</th></tr>
+    <tr><td><code>plCameraPlayerSettings::SetLookSensitivity(float)</code></td><td><code>Camera.LookSensitivity</code></td></tr>
+    <tr><td><code>plCameraPlayerSettings::SetInvertY(bool)</code></td><td><code>Camera.InvertY</code></td></tr>
+    <tr><td><code>plCameraPlayerSettings::SetFieldOfViewOffset(float)</code></td><td><code>Camera.FieldOfViewOffset</code></td></tr>
+    <tr><td><code>plInputBindings::SetValue(key, value)</code></td><td>Any key, including the two assist keys.</td></tr>
+    <tr><td><code>plInputBindings::Execute("SetValue", { Key, Value })</code></td><td>Any key, from game UI or managed code. <code>Execute("Query")</code> returns the stored values under <code>Values</code>.</td></tr>
+  </table></div>
+  <p>The input bindings save pending changes to <code>InputBindings.ddl</code> during their per-frame update.</p>
+
+  <h3>Adding camera options to an options menu</h3>
+  <ol class="steps">
+    <li>Add a slider for look sensitivity (for example 0.2 to 3) and a toggle for invert Y.</li>
+    <li>When the slider changes, call <code>Execute("SetValue", args)</code> on the game application's input
+      bindings, where <code>args</code> holds <code>Key</code> = <code>"Camera.LookSensitivity"</code> and
+      <code>Value</code> = the slider value. For the toggle, set <code>Camera.InvertY</code> to 0 or 1.</li>
+    <li>Optionally add a field-of-view slider that sets <code>Camera.FieldOfViewOffset</code>, for example from
+      -10 to 20.</li>
+    <li>For an "aim assist" or "camera assist" option, set <code>Camera.GamepadAssist</code> (and
+      <code>Camera.MouseAssist</code> if mouse players should get it) between 0 and 1.</li>
+    <li>When the menu opens, read the current values with <code>Execute("Query")</code> to fill the controls.</li>
+  </ol>
+
+  <h2 id="lookinput">Look input</h2>
+  <p>
+    The Third Person and First Person views have a <code>LookInput</code> property of type
+    <code>plCameraLookInput</code>, in their <b>Control</b> group. It names the input actions that turn the view,
+    read through a <code>plInputComponent</code>. The view looks for that component on its subject and the
+    subject's parents first, then on the view's own object and its parents; it must be active.
+  </p>
+  <div class="tblwrap"><table>
+    <tr><th>Property</th><th>Default</th><th>Description</th></tr>
+    <tr><td><code>LookAction</code></td><td>empty</td><td>A vector action: x turns right, y looks up.</td></tr>
+    <tr><td><code>TurnLeftAction</code></td><td>empty</td><td>Turns left by the action's value.</td></tr>
+    <tr><td><code>TurnRightAction</code></td><td>empty</td><td>Turns right by the action's value.</td></tr>
+    <tr><td><code>LookUpAction</code></td><td>empty</td><td>Looks up by the action's value.</td></tr>
+    <tr><td><code>LookDownAction</code></td><td>empty</td><td>Looks down by the action's value.</td></tr>
+    <tr><td><code>Sensitivity</code></td><td>1</td><td>Multiplier for this view (0&ndash;100).</td></tr>
+    <tr><td><code>InvertY</code></td><td>off</td><td>Inverts vertical input for this view.</td></tr>
+  </table></div>
+  <p>
+    The vector action and the four directional actions are all read and added together, so a project can bind a
+    stick to the vector action and keep existing look buttons. With no action set, the view reads no input and
+    is driven by script only.
+  </p>
+
+  <h3>How values are interpreted</h3>
+  <p>
+    Action values are treated as <b>per-frame deltas in radians</b>. The amount applied each frame is:
+  </p>
+  <p><code>(vector + directional actions) &times; Sensitivity &times; Camera.LookSensitivity &times; zoom look scale</code></p>
+  <p>
+    The zoom look scale comes from active Zoom modifiers and is 1 otherwise. The view's <code>InvertY</code> and
+    the player's <code>Camera.InvertY</code> each flip the vertical part, so with both on the input is not
+    inverted.
+  </p>
+  <div class="note warn">
+    <div class="nh">Note</div>
+    Mouse movement already arrives as an amount per frame and fits this directly. An action that reports a
+    steady value while held, such as a stick or a key, is applied in full every frame: at value 1 and
+    <code>Sensitivity</code> 1 it turns one radian per frame, and it turns faster at higher frame rates. Give
+    such actions a small scale in the input action map or a low <code>Sensitivity</code>.
+  </div>
+
+  <h3>Steering</h3>
+  <p>
+    Any non-zero look input in a frame marks the player as steering that frame. Composition then holds back its
+    soft-zone correction, Look At breaks out (with <code>BreakOnInput</code>), Look Hint restarts its idle timer,
+    and the Third Person View restarts its recenter delay. Panning a Top-Down View also counts as steering.
+  </p>
+
+  <h2>Troubleshooting</h2>
+  <div class="tblwrap"><table>
+    <tr><th>Symptom</th><th>Likely cause</th></tr>
+    <tr><td>Settings changes have no effect</td><td>The values were written somewhere other than the game application's input bindings, or the key name is misspelled. Keys are case sensitive.</td></tr>
+    <tr><td>The camera spins far too fast with a stick</td><td>Stick values are applied per frame. Scale the action down or lower <code>Sensitivity</code>.</td></tr>
+    <tr><td>Vertical look is inverted unexpectedly</td><td>Both the view's <code>InvertY</code> and <code>Camera.InvertY</code> flip it; check both.</td></tr>
+    <tr><td>Field of view in the editor's play mode differs from a build</td><td>A stored <code>Camera.FieldOfViewOffset</code> applies wherever the input bindings are loaded.</td></tr>
+  </table></div>
+
+  <div class="seealso"><b>See also:</b>
+    <a href="index.html">Gameplay Cameras</a> &middot;
+    <a href="Views.html">Camera Views</a> &middot;
+    <a href="Framing.html">Framing, Look At and Focus</a> &middot;
+    <a href="Modifiers.html">The Modifier Stack</a>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Camera Views — PlasmaEngine2 Manual</title>
+<style>
+  :root {
+    --bg: #0f141a; --panel: #161d25; --panel2: #1b242e; --ink: #dbe4ec; --muted: #8698a9;
+    --line: #263442; --accent: #7cc3d9; --amber: #d9a35c; --ok: #79c98f; --code-bg: #10171e;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: "Segoe UI", system-ui, sans-serif; font-size: 15.5px; line-height: 1.65; }
+  a { color: var(--accent); }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 44px 28px 90px; }
+  h1, h2, h3, .crumbs { font-family: "Bahnschrift", "Arial Narrow", sans-serif; }
+  .crumbs { text-transform: uppercase; letter-spacing: 0.14em; font-size: 12px; color: var(--muted); margin: 0 0 10px; }
+  .crumbs a { color: var(--muted); }
+  h1 { font-size: 34px; margin: 0 0 14px; }
+  h2 { font-size: 22px; letter-spacing: 0.02em; margin: 46px 0 10px; text-transform: uppercase; }
+  h3 { font-size: 17px; margin: 26px 0 6px; }
+  p, li { max-width: 78ch; }
+  code { font-family: "Cascadia Code", "Consolas", monospace; font-size: 0.86em; background: var(--code-bg); border: 1px solid var(--line); padding: 1px 5px; border-radius: 2px; }
+  table { border-collapse: collapse; width: 100%; background: var(--panel); }
+  .tblwrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 3px; margin: 16px 0; }
+  th { text-align: left; font-family: "Bahnschrift", "Arial Narrow", sans-serif; font-size: 12.5px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); padding: 9px 13px; border-bottom: 2px solid var(--line); background: var(--panel2); }
+  td { padding: 9px 13px; border-bottom: 1px solid var(--line); vertical-align: top; font-size: 14px; }
+  td:first-child { white-space: nowrap; }
+  tr:last-child td { border-bottom: none; }
+  tr.grp td { background: var(--panel2); color: var(--muted); font-family: "Bahnschrift", "Arial Narrow", sans-serif; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; padding: 6px 13px; }
+  .note { border-left: 3px solid var(--accent); background: var(--panel); padding: 10px 16px; margin: 16px 0; font-size: 14px; max-width: 78ch; }
+  .note.warn { border-left-color: var(--amber); }
+  .note .nh { font-family: "Bahnschrift", "Arial Narrow", sans-serif; font-size: 11.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 2px; }
+  ol.steps li { margin: 8px 0; }
+  .seealso { margin-top: 48px; border-top: 1px dashed var(--line); padding-top: 16px; font-size: 14px; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="crumbs"><a href="index.html">Manual</a> / <a href="index.html">Gameplay Cameras</a> / Views</p>
+  <h1>Camera Views</h1>
+
+  <p>
+    A camera view is a component that works out where a camera should be for one frame: its position, rotation,
+    field of view, focus distance and near plane. With a <a href="Director.html">Camera Director</a> in the world,
+    the director asks the active view for its pose, blends it and writes it to its own camera. Without a
+    director, each view writes its pose to its own object (standalone mode). All views share a set of common
+    properties and can carry their own modifier list.
+  </p>
+
+  <h2>Common view properties</h2>
+  <p>
+    Every view derives from <code>plCameraViewComponent</code> and shows these properties in its <b>View</b> and
+    <b>Modifiers</b> groups.
+  </p>
+  <div class="tblwrap"><table>
+    <tr><th>Property</th><th>Default</th><th>Description</th></tr>
+    <tr><td><code>FieldOfView</code></td><td>0</td><td>Field of view in degrees (0&ndash;170), in whatever axis the camera component's mode fixes. 0 keeps the camera's own field of view: the camera component's value, read once when play starts. A non-zero value replaces it while this view is shown. The player's <a href="PlayerSettings.html">field-of-view offset</a> and modifiers such as FOV Kick and Zoom apply on top in both cases.</td></tr>
+    <tr><td><code>Priority</code></td><td>50</td><td>Stored with the view. In this version every request names its own priority (a volume's <code>Priority</code>, the <code>Priority</code> argument of <code>ActivateView</code>, or the request message), so this value does not affect which view is shown.</td></tr>
+    <tr><td><code>BlendTime</code></td><td>0 s</td><td>Blend used when this view becomes active and the request does not set one. 0 uses the director's <code>BlendTime</code>.</td></tr>
+    <tr><td><code>BlendCurve</code></td><td>Ease In Out</td><td>Curve for this view's blend: Cut, Linear, Ease In, Ease Out or Ease In Out. Only used when <code>BlendTime</code> is above 0.</td></tr>
+    <tr><td><code>Modifiers</code></td><td>empty</td><td>Modifiers that only apply while this view is active. They run before the director's modifiers in each stage. See <a href="Modifiers.html">The Modifier Stack</a>.</td></tr>
+  </table></div>
+
+  <h3>The subject</h3>
+  <p>
+    Most views have a <b>subject</b>: the object they follow or look at, usually the player. Framing modifiers aim
+    at the subject point, effect modifiers read its speed and ground state, and camera volumes test where it is.
+    Grounded, airborne and crouching states are read from any component on the subject object that exposes the
+    script functions <code>IsStandingOnGround</code>, <code>IsInAir</code> and <code>IsCrouching</code>, which the
+    character controllers do.
+  </p>
+  <div class="tblwrap"><table>
+    <tr><th>View</th><th>Subject object</th><th>Subject point</th></tr>
+    <tr><td>Third Person</td><td>Target Object</td><td>Halfway between Target Offset Low and High, in the target's space.</td></tr>
+    <tr><td>First Person</td><td>The topmost ancestor of the eye object (the character root)</td><td>The eye point.</td></tr>
+    <tr><td>Fixed, Rail</td><td>Target</td><td>The target's position plus Target Offset.</td></tr>
+    <tr><td>Top-Down</td><td>Target</td><td>The target's position.</td></tr>
+  </table></div>
+
+  <h3>Object references</h3>
+  <p>
+    Reference properties such as <code>Target</code>, <code>Spline</code> and <code>EyeObject</code> are picked in
+    the editor like any other object reference. At runtime, a reference set from script is treated as an object
+    path or name, searched relative to the view's object. The Third Person View's <code>TargetObject</code> is
+    always a path or name (default <code>..</code>, the parent).
+  </p>
+
+  <h3>Looking through a view in the editor</h3>
+  <p>
+    Selecting an object with a view draws its rig in the viewport: a frustum at the view's last pose, plus the
+    view-specific drawing described below. While playing, <code>Cameras.Debug 2</code> draws the active view's
+    rig.
+  </p>
+
+  <h2>Third Person View</h2>
+  <p>
+    <code>plThirdPersonViewComponent</code> puts the camera on an arm behind a target. The arm hangs from a pivot
+    point between <code>TargetOffsetLow</code> and <code>TargetOffsetHigh</code>, picked by how far the arm is
+    raised, and pitches between <code>MinUpRotation</code> and <code>MaxUpRotation</code>. A positive up rotation
+    raises the arm, so the camera sits above the target and looks down. The arm is kept below
+    <code>CeilingHeight</code> and above <code>FloorHeight</code>, both measured from the target's origin. A
+    sphere of radius <code>SweepWidth</code> is swept along the arm; when it hits, the camera is pulled in at
+    <code>ZoomInSpeed</code> and lets back out at <code>ZoomOutSpeed</code>, never closer than
+    <code>MinDistance</code>.
+  </p>
+
+  <h3>Version-1 compatible defaults</h3>
+  <p>
+    With its default settings the view behaves as it did in Game Components 1.x: it follows the target's yaw,
+    pitches only through the <code>RotateUp</code> script function, and its sweep hits static shapes only. Scenes
+    saved with version 1 of the component load their original properties, and every property added in version 2
+    starts at a value that keeps that behaviour: no look input, Follow Target yaw, no shoulder offset, no lag, no
+    recentering, no dynamic-shape hits and no look-ahead. The common view data loads with its defaults, so
+    <code>FieldOfView</code> 0 leaves the camera's field of view as authored.
+  </p>
+  <p>The version-2 properties are all opt-in:</p>
+  <ul>
+    <li><b>Look input</b> (<code>LookInput</code>): the view turns from input actions by itself. See
+      <a href="PlayerSettings.html#lookinput">Look input</a>.</li>
+    <li><b>Yaw mode</b> (<code>YawMode</code>): Follow Target keeps the camera behind the target and adds look
+      input as an offset; Free orbits independently of the target's rotation.</li>
+    <li><b>Shoulder offset</b> and <b>shoulder swap</b>: shift camera and aim point sideways together.</li>
+    <li><b>Position lag</b>: the aim point trails the target.</li>
+    <li><b>Auto recenter</b>: swings the camera back behind a moving target after the player stops steering.</li>
+    <li><b>Hit Dynamic Shapes</b>: dynamic bodies also pull the arm in. Characters never do.</li>
+    <li><b>Look-ahead</b>: the camera aims ahead of a moving target.</li>
+  </ul>
+
+  <h3>Properties</h3>
+  <div class="tblwrap"><table>
+    <tr><th>Property</th><th>Default</th><th>Description</th></tr>
+    <tr class="grp"><td colspan="3">Rig</td></tr>
+    <tr><td><code>TargetObject</code></td><td><code>..</code></td><td>Path or name of the object to follow, searched relative to the view's object. <code>..</code> is the parent.</td></tr>
+    <tr><td><code>TargetOffsetHigh</code></td><td>(0, 0, 0)</td><td>Pivot in the target's space when the arm is fully raised.</td></tr>
+    <tr><td><code>TargetOffsetLow</code></td><td>(0, 0, 0)</td><td>Pivot in the target's space when the arm is fully lowered. Level arms use the point halfway between the two.</td></tr>
+    <tr><td><code>MinDistance</code></td><td>0.25</td><td>Closest the sweep may pull the camera to the pivot, in meters (0.05&ndash;10).</td></tr>
+    <tr><td><code>MaxDistance</code></td><td>3</td><td>Arm length when nothing is in the way, in meters (0.5&ndash;100).</td></tr>
+    <tr><td><code>MinUpRotation</code></td><td>-70&deg;</td><td>Lowest arm angle (camera below the pivot, looking up). Range -85&deg; to 70&deg;.</td></tr>
+    <tr><td><code>MaxUpRotation</code></td><td>80&deg;</td><td>Highest arm angle (camera above the pivot, looking down). Range -70&deg; to 85&deg;.</td></tr>
+    <tr><td><code>CeilingHeight</code></td><td>4</td><td>The camera stays below this height above the target's origin while the arm is raised.</td></tr>
+    <tr><td><code>FloorHeight</code></td><td>0</td><td>The camera stays above this height above the target's origin while the arm is lowered.</td></tr>
+    <tr><td><code>CollisionLayer</code></td><td>0</td><td>Physics collision layer the arm sweep tests against.</td></tr>
+    <tr><td><code>SweepWidth</code></td><td>0.2</td><td>Radius of the sphere swept along the arm, in meters (0.05&ndash;2).</td></tr>
+    <tr><td><code>ZoomInSpeed</code></td><td>10</td><td>How fast the camera moves in when the arm gets shorter. Higher is faster.</td></tr>
+    <tr><td><code>ZoomOutSpeed</code></td><td>1</td><td>How fast the camera moves back out when the arm gets longer. Higher is faster.</td></tr>
+    <tr><td><code>HitDynamicShapes</code></td><td>off</td><td>Off: only static shapes pull the arm in. On: dynamic bodies do too.</td></tr>
+    <tr class="grp"><td colspan="3">Control</td></tr>
+    <tr><td><code>LookInput</code></td><td>no actions</td><td>Input actions that turn the view. Horizontal input changes the yaw, vertical input raises or lowers the arm. See <a href="PlayerSettings.html#lookinput">Look input</a>.</td></tr>
+    <tr><td><code>YawMode</code></td><td>Follow Target</td><td>Follow Target: stays behind the target; look input and <code>Orbit</code> add an offset. Free: orbits on its own; the start heading is the target's facing when play starts.</td></tr>
+    <tr><td><code>ShoulderOffset</code></td><td>0</td><td>Sideways offset of camera and aim point in meters, positive to the right (-3 to 3). Changes ease in over a fraction of a second.</td></tr>
+    <tr><td><code>ShoulderSwapAction</code></td><td>empty</td><td>Input action that moves the camera to the other shoulder when pressed.</td></tr>
+    <tr><td><code>PositionLag</code></td><td>0 s</td><td>How far the aim point trails the target, as a time constant (0&ndash;2 s). 0 follows exactly.</td></tr>
+    <tr><td><code>AutoRecenter</code></td><td>off</td><td>Follow Target mode only: swings the camera back behind the target after the player has not steered for <code>RecenterDelay</code>, but only while the target moves (above about 0.5 m/s).</td></tr>
+    <tr><td><code>RecenterDelay</code></td><td>2 s</td><td>Time without steering before recentering starts.</td></tr>
+    <tr><td><code>RecenterSpeed</code></td><td>90&deg;</td><td>Recentering speed, in degrees per second.</td></tr>
+    <tr><td><code>LookAhead</code></td><td>0</td><td>How far ahead of a moving target the camera aims, in meters (0&ndash;10). The full distance is reached at 6 m/s.</td></tr>
+  </table></div>
+
+  <h3>Script functions</h3>
+  <div class="tblwrap"><table>
+    <tr><th>Function</th><th>Description</th></tr>
+    <tr><td><code>RotateUp(angle)</code></td><td>Raises the arm by the angle (negative lowers it), clamped to the up rotation limits.</td></tr>
+    <tr><td><code>Orbit(angle)</code></td><td>Turns the camera around the target. Positive turns left.</td></tr>
+    <tr><td><code>SwapShoulder()</code></td><td>Moves the camera to the other shoulder.</td></tr>
+  </table></div>
+
+  <h3>Editor drawing</h3>
+  <p>
+    When the object is selected, the view draws the line between the two target offsets, the arm to the current
+    camera position and its continuation to <code>MaxDistance</code>, the sweep sphere (amber when blocked), the
+    ceiling and floor as squares around the target, and the camera frustum. In edit mode the drawing uses the
+    view's own maths with a level arm, so you can tune distances and offsets without playing.
+  </p>
+
+  <h3>Setting up a third-person camera</h3>
+  <ol class="steps">
+    <li>Open the character prefab. Make sure the root has a <b>plInputComponent</b> using the project's input
+      action map if the camera should read look input.</li>
+    <li>Add a child object named <code>CameraView</code> and add a <b>Third Person View</b> to it. Leave
+      <code>TargetObject</code> at <code>..</code>.</li>
+    <li>Set <code>TargetOffsetLow</code> to about chest height, for example (0, 0, 1.2), and
+      <code>TargetOffsetHigh</code> to about head height, for example (0, 0, 1.7). Select the object and check the
+      drawn rig.</li>
+    <li>Set <code>MaxDistance</code> to the arm length you want, for example 3.5, and <code>CollisionLayer</code>
+      to the layer your level geometry uses.</li>
+    <li>In the <b>Control</b> group, open <code>LookInput</code> and set <code>LookAction</code> to the action
+      that reports mouse or stick movement (or set the four turn and look actions). Set <code>YawMode</code> to
+      Free if the camera should orbit independently of the character's facing.</li>
+    <li>Optional: set <code>ShoulderOffset</code> to 0.5 for an over-the-shoulder camera, assign a
+      <code>ShoulderSwapAction</code>, and turn on <code>HitDynamicShapes</code> if crates and doors should push
+      the camera in.</li>
+    <li>In the scene, create a <code>Camera</code> object with a <b>Camera</b> component (Usage Hint Main View)
+      and a <b>Camera Director</b>. Set the director's <code>DefaultView</code> to the <code>CameraView</code>
+      object of the placed character.</li>
+    <li>Play and turn the camera. Run <code>Cameras.Debug 2</code> to see the rig while playing.</li>
+  </ol>
+  <div class="note">
+    <div class="nh">Note</div>
+    Without a director, put the Camera component on <code>CameraView</code> instead. The view then moves that
+    object itself, which is how scenes made with Game Components 1.x work.
+  </div>
+
+  <h2>First Person View</h2>
+  <p>
+    <code>plFirstPersonViewComponent</code> puts the camera at a character's eyes. The position follows the eye
+    object plus <code>EyeOffset</code>. Only the height is smoothed, over <code>EyeHeightSmoothing</code>, so
+    crouching eases while walking stays exact. With <code>YawFromEyeObject</code> on, the yaw comes from the eye
+    object, so a character controller that turns itself also turns the view; pitch comes from look input or
+    script and is clamped to <code>MaxPitch</code>. In a headset (camera mode Stereo) the view adds no pitch, and
+    the director writes only position and yaw, because the headset owns the rest.
+  </p>
+  <div class="tblwrap"><table>
+    <tr><th>Property</th><th>Default</th><th>Description</th></tr>
+    <tr><td><code>EyeObject</code></td><td>empty</td><td>The object at the eyes, usually the character's head object. Empty uses the view object's parent.</td></tr>
+    <tr><td><code>EyeOffset</code></td><td>(0, 0, 0)</td><td>Offset of the eye point in the eye object's space.</td></tr>
+    <tr><td><code>EyeHeightSmoothing</code></td><td>0.12 s</td><td>Time constant for height changes such as crouching (0&ndash;2 s). 0 follows exactly.</td></tr>
+    <tr><td><code>MaxPitch</code></td><td>85&deg;</td><td>Pitch limit up and down (0&ndash;89&deg;).</td></tr>
+    <tr><td><code>YawFromEyeObject</code></td><td>on</td><td>On: yaw follows the eye object's facing, and horizontal look input is ignored. Off: horizontal look input turns the view by itself.</td></tr>
+    <tr><td><code>LookInput</code></td><td>no actions</td><td>Input actions that pitch (and, with <code>YawFromEyeObject</code> off, turn) the view. See <a href="PlayerSettings.html#lookinput">Look input</a>.</td></tr>
+    <tr><td><code>NearPlane</code></td><td>0</td><td>Near clip distance while this view is shown, in meters (0&ndash;1). 0 leaves the camera's own setting.</td></tr>
+  </table></div>
+  <div class="tblwrap"><table>
+    <tr><th>Function</th><th>Description</th></tr>
+    <tr><td><code>SetVerticalRotation(Radians)</code></td><td>Sets the pitch, clamped to <code>MaxPitch</code>.</td></tr>
+    <tr><td><code>ChangeVerticalRotation(Radians)</code></td><td>Adds to the pitch, clamped to <code>MaxPitch</code>.</td></tr>
+  </table></div>
+  <p>
+    The two script functions have the same names and arguments as the Head Bone component's, so scripts written
+    for Head Bone drive the First Person View unchanged.
+  </p>
+
+  <h3>Setting up a first-person camera on a character with a head object</h3>
+  <ol class="steps">
+    <li>Open the character prefab. The character controller sits on the root and has a head object as a child
+      (the object it raises and lowers when crouching).</li>
+    <li>Under the head object, create a child object named <code>FirstPersonView</code> and add a <b>First Person
+      View</b>. Leave <code>EyeObject</code> empty, so it uses the head object.</li>
+    <li>If the eyes are not at the head object's origin, set <code>EyeOffset</code>.</li>
+    <li>For pitch, either set <code>LookInput</code> &rarr; <code>LookUpAction</code> and
+      <code>LookDownAction</code> (or a vector <code>LookAction</code>), or keep the script that called Head Bone's
+      <code>ChangeVerticalRotation</code> and point it at this component instead. Leave
+      <code>YawFromEyeObject</code> on so the character controller keeps turning the player.</li>
+    <li>If the player's own arms or weapon clip into nearby walls, set <code>NearPlane</code>, for example to
+      0.05.</li>
+    <li>In the scene, set the Camera Director's <code>DefaultView</code> to the <code>FirstPersonView</code>
+      object, or put the Camera component on <code>FirstPersonView</code> for standalone mode.</li>
+    <li>Add <b>Head Bob</b>, <b>Landing</b> and <b>Recoil</b> modifiers to the director or to the view's own
+      <code>Modifiers</code> list. Head Bob is scoped to first-person views by default.</li>
+  </ol>
+  <div class="note">
+    <div class="nh">Note</div>
+    If the head object still has a Head Bone component, remove it or stop calling it. Both would pitch the camera.
+  </div>
+
+  <h2>Fixed View</h2>
+  <p>
+    <code>plFixedViewComponent</code> stays where it is placed: a security camera or a fixed-angle shot. Without
+    a target it uses its object's rotation. With a <code>Target</code> it turns to keep looking at it, smoothed by
+    <code>TrackingSmoothing</code>, and sets the focus distance to the target. With <code>FrameTarget</code> on it
+    also narrows the field of view so an area <code>FrameSize</code> meters tall around the target fills the
+    screen height. The result is never below 5&deg; and never wider than <code>FieldOfView</code>, or 90&deg; when
+    <code>FieldOfView</code> is 0.
+  </p>
+  <div class="tblwrap"><table>
+    <tr><th>Property</th><th>Default</th><th>Description</th></tr>
+    <tr><td><code>Target</code></td><td>empty</td><td>Object to look at.</td></tr>
+    <tr><td><code>TargetOffset</code></td><td>(0, 0, 1)</td><td>World-space offset added to the target's position.</td></tr>
+    <tr><td><code>TrackingSmoothing</code></td><td>0.15 s</td><td>Time constant for turning toward the target (0&ndash;2 s). 0 turns instantly.</td></tr>
+    <tr><td><code>FrameTarget</code></td><td>off</td><td>Narrows the field of view to frame the target.</td></tr>
+    <tr><td><code>FrameSize</code></td><td>3</td><td>Height in meters of the area framed around the target (0.1&ndash;100).</td></tr>
+  </table></div>
+
+  <h2>Rail View</h2>
+  <p>
+    <code>plRailViewComponent</code> rides along a spline like a camera on a dolly track and looks at a target.
+    The spline is a <code>plSplineComponent</code>; edit its nodes with the Spline Edit Mode. Positions on the
+    spline are evaluated in global space. In <b>Closest To Target</b> mode the camera sits at the point of the
+    spline nearest the target, shifted by <code>KeyOffset</code>. In <b>Scripted</b> mode a script moves it with
+    <code>SetRailKey</code>. Movement along the spline is smoothed by <code>RailSmoothing</code>. Without a target
+    the camera looks along the spline.
+  </p>
+  <div class="tblwrap"><table>
+    <tr><th>Property</th><th>Default</th><th>Description</th></tr>
+    <tr><td><code>Spline</code></td><td>empty</td><td>Object with the <code>plSplineComponent</code>. Empty uses the view's own object.</td></tr>
+    <tr><td><code>Target</code></td><td>empty</td><td>Object to look at and, in Closest To Target mode, to follow along the spline.</td></tr>
+    <tr><td><code>TargetOffset</code></td><td>(0, 0, 1)</td><td>World-space offset added to the target's position.</td></tr>
+    <tr><td><code>Mode</code></td><td>Closest To Target</td><td>Closest To Target or Scripted.</td></tr>
+    <tr><td><code>KeyOffset</code></td><td>0</td><td>Added to the spline key, so the camera can lead or trail the target along the track.</td></tr>
+    <tr><td><code>RailSmoothing</code></td><td>0.3 s</td><td>Time constant for movement along the spline (0&ndash;5 s). 0 follows exactly.</td></tr>
+  </table></div>
+  <div class="tblwrap"><table>
+    <tr><th>Function</th><th>Description</th></tr>
+    <tr><td><code>SetRailKey(Key)</code></td><td>Sets the spline key the camera moves to in Scripted mode. The key is the spline's own parameter.</td></tr>
+  </table></div>
+  <div class="note warn">
+    <div class="nh">Note</div>
+    In standalone mode the view moves its own object. Keep the spline on a separate object in that case;
+    otherwise the spline moves with the camera.
+  </div>
+
+  <h2>Top-Down View</h2>
+  <p>
+    <code>plTopDownViewComponent</code> places the camera high above a target at a fixed pitch, for top-down,
+    isometric and strategy games. The camera looks at the target plus any pan offset from the current zoom
+    distance, at <code>Pitch</code> below the horizon and <code>Yaw</code> around it. Zoom steps, rotation steps
+    and panning come from input actions or script; zoom and rotation changes ease in. With
+    <code>GroundFollow</code> on, the focus point drops onto the static ground under it.
+  </p>
+  <div class="tblwrap"><table>
+    <tr><th>Property</th><th>Default</th><th>Description</th></tr>
+    <tr><td><code>Target</code></td><td>empty</td><td>Object to follow. Without one, the view's own position is the focus point.</td></tr>
+    <tr><td><code>Pitch</code></td><td>55&deg;</td><td>Angle below the horizon (5&ndash;89&deg;).</td></tr>
+    <tr><td><code>Yaw</code></td><td>45&deg;</td><td>Starting heading around the focus point.</td></tr>
+    <tr class="grp"><td colspan="3">Control</td></tr>
+    <tr><td><code>RotateStep</code></td><td>90&deg;</td><td>How far one rotate step turns.</td></tr>
+    <tr><td><code>RotateLeftAction</code></td><td>empty</td><td>Input action that rotates one step left when pressed.</td></tr>
+    <tr><td><code>RotateRightAction</code></td><td>empty</td><td>Input action that rotates one step right when pressed.</td></tr>
+    <tr class="grp"><td colspan="3">Zoom</td></tr>
+    <tr><td><code>ZoomDistances</code></td><td>8, 14, 22</td><td>Camera distances for each zoom level, nearest first. An empty list uses 14.</td></tr>
+    <tr><td><code>StartZoom</code></td><td>1</td><td>Index of the zoom level when play starts.</td></tr>
+    <tr><td><code>ZoomInAction</code></td><td>empty</td><td>Input action that moves one level closer when pressed.</td></tr>
+    <tr><td><code>ZoomOutAction</code></td><td>empty</td><td>Input action that moves one level further when pressed.</td></tr>
+    <tr class="grp"><td colspan="3">Pan</td></tr>
+    <tr><td><code>PanAction</code></td><td>empty</td><td>Vector input action: y pans away from the camera, x to its right.</td></tr>
+    <tr><td><code>PanSpeed</code></td><td>12</td><td>Pan speed in meters per second at zoom distance 14, scaled with the current distance (0&ndash;500).</td></tr>
+    <tr><td><code>MaxPan</code></td><td>30</td><td>Farthest the pan may move from the target, in meters.</td></tr>
+    <tr><td><code>EdgeScroll</code></td><td>off</td><td>Pans while the mouse is within 2% of a screen edge.</td></tr>
+    <tr class="grp"><td colspan="3">Follow</td></tr>
+    <tr><td><code>FollowLag</code></td><td>0.2 s</td><td>Time constant for following the focus point (0&ndash;3 s). 0 follows exactly.</td></tr>
+    <tr><td><code>GroundFollow</code></td><td>off</td><td>Moves the focus point down onto static ground (a ray cast from 50 m above it, 100 m long).</td></tr>
+  </table></div>
+  <div class="tblwrap"><table>
+    <tr><th>Function</th><th>Description</th></tr>
+    <tr><td><code>ZoomIn()</code></td><td>One zoom level closer.</td></tr>
+    <tr><td><code>ZoomOut()</code></td><td>One zoom level further.</td></tr>
+    <tr><td><code>RotateStep(Steps)</code></td><td>Rotates by <code>RotateStep</code> times the number of steps. Positive turns left.</td></tr>
+    <tr><td><code>ResetPan()</code></td><td>Moves the focus back onto the target.</td></tr>
+  </table></div>
+  <div class="note warn">
+    <div class="nh">Note</div>
+    Give the Top-Down View a <code>Target</code> when it runs in standalone mode. Without one it uses its own
+    position as the focus point while also moving its own object, so the camera keeps sliding away.
+  </div>
+
+  <h2>Troubleshooting</h2>
+  <div class="tblwrap"><table>
+    <tr><th>Symptom</th><th>Likely cause</th></tr>
+    <tr><td>The camera does not move at all</td><td>The view has no target (Third Person: <code>TargetObject</code> does not resolve; First Person: no eye object and no parent; Rail: no spline). Or the world has a director that shows a different view.</td></tr>
+    <tr><td>Look input does nothing</td><td>No <code>LookInput</code> actions are set, or no active <code>plInputComponent</code> is found on the subject, its parents, the view's object or its parents.</td></tr>
+    <tr><td>First-person view does not turn left and right from look input</td><td><code>YawFromEyeObject</code> is on, so yaw comes from the character. Turn the character, or switch the option off.</td></tr>
+    <tr><td>Third-person camera passes through crates and doors</td><td><code>HitDynamicShapes</code> is off, or the bodies are on a layer that <code>CollisionLayer</code> does not collide with.</td></tr>
+    <tr><td>The field of view changes when a view becomes active</td><td>That view has a non-zero <code>FieldOfView</code>. Set it to 0 to keep the camera's own field of view.</td></tr>
+    <tr><td>Camera slides out from close up when play starts</td><td>The arm starts short and lengthens at <code>ZoomOutSpeed</code>. Raise <code>ZoomOutSpeed</code> for a faster start.</td></tr>
+  </table></div>
+
+  <div class="seealso"><b>See also:</b>
+    <a href="index.html">Gameplay Cameras</a> &middot;
+    <a href="Director.html">Camera Director</a> &middot;
+    <a href="Modifiers.html">The Modifier Stack</a> &middot;
+    <a href="Framing.html">Framing, Look At and Focus</a> &middot;
+    <a href="PlayerSettings.html">Player Look Settings</a>
+  </div>
+</div>
+</body>
+</html>

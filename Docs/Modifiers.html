@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>The Modifier Stack and Effect Modifiers — PlasmaEngine2 Manual</title>
+<style>
+  :root {
+    --bg: #0f141a; --panel: #161d25; --panel2: #1b242e; --ink: #dbe4ec; --muted: #8698a9;
+    --line: #263442; --accent: #7cc3d9; --amber: #d9a35c; --ok: #79c98f; --code-bg: #10171e;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: "Segoe UI", system-ui, sans-serif; font-size: 15.5px; line-height: 1.65; }
+  a { color: var(--accent); }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 44px 28px 90px; }
+  h1, h2, h3, .crumbs { font-family: "Bahnschrift", "Arial Narrow", sans-serif; }
+  .crumbs { text-transform: uppercase; letter-spacing: 0.14em; font-size: 12px; color: var(--muted); margin: 0 0 10px; }
+  .crumbs a { color: var(--muted); }
+  h1 { font-size: 34px; margin: 0 0 14px; }
+  h2 { font-size: 22px; letter-spacing: 0.02em; margin: 46px 0 10px; text-transform: uppercase; }
+  h3 { font-size: 17px; margin: 26px 0 6px; }
+  p, li { max-width: 78ch; }
+  code { font-family: "Cascadia Code", "Consolas", monospace; font-size: 0.86em; background: var(--code-bg); border: 1px solid var(--line); padding: 1px 5px; border-radius: 2px; }
+  table { border-collapse: collapse; width: 100%; background: var(--panel); }
+  .tblwrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 3px; margin: 16px 0; }
+  th { text-align: left; font-family: "Bahnschrift", "Arial Narrow", sans-serif; font-size: 12.5px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); padding: 9px 13px; border-bottom: 2px solid var(--line); background: var(--panel2); }
+  td { padding: 9px 13px; border-bottom: 1px solid var(--line); vertical-align: top; font-size: 14px; }
+  td:first-child { white-space: nowrap; }
+  tr:last-child td { border-bottom: none; }
+  .note { border-left: 3px solid var(--accent); background: var(--panel); padding: 10px 16px; margin: 16px 0; font-size: 14px; max-width: 78ch; }
+  .note.warn { border-left-color: var(--amber); }
+  .note .nh { font-family: "Bahnschrift", "Arial Narrow", sans-serif; font-size: 11.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 2px; }
+  ol.steps li { margin: 8px 0; }
+  .seealso { margin-top: 48px; border-top: 1px dashed var(--line); padding-top: 16px; font-size: 14px; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="crumbs"><a href="index.html">Manual</a> / <a href="index.html">Gameplay Cameras</a> / Modifiers</p>
+  <h1>The Modifier Stack and Effect Modifiers</h1>
+
+  <p>
+    Modifiers adjust the camera pose after the view has computed it and the director has blended it. Framing
+    modifiers aim the camera; effect modifiers add motion on top of the framed pose. Each modifier is an entry in
+    an ordered <code>Modifiers</code> list, either on the <a href="Director.html">Camera Director</a> (applied to
+    every view) or on a <a href="Views.html">view</a> (applied only while that view is active). This page covers
+    how the stack runs and every effect modifier. The framing modifiers are described in
+    <a href="Framing.html">Framing, Look At and Focus</a>.
+  </p>
+
+  <h2>How the stack runs</h2>
+  <p>Each frame, after blending:</p>
+  <ol>
+    <li><b>Prepare.</b> Every enabled modifier gets a chance to exchange information, the active view's first,
+      then the director's. This is how Look At hands a second subject to Composition.</li>
+    <li><b>Framing stage.</b> Framing modifiers of the active view, in list order, then those of the director.</li>
+    <li><b>Effects stage.</b> Effect modifiers of the active view, in list order, then those of the director.</li>
+  </ol>
+  <p>
+    Each modifier always runs in its own stage, wherever it sits in the list. Order only matters within a
+    stage. A Composition modifier listed after a Shake modifier still runs first, so it never sees shake as
+    subject movement and cancels it.
+  </p>
+  <p>
+    In standalone mode (no director in the world) only the view's own list runs, in the same two stages.
+  </p>
+  <div class="note">
+    <div class="nh">Note</div>
+    Order within the effects stage changes the result. For example, Zoom multiplies the field of view and FOV
+    Kick adds degrees: Zoom before FOV Kick adds the full kick to the zoomed field of view, FOV Kick before Zoom
+    scales the kick down with the zoom.
+  </div>
+
+  <h2>Common modifier properties</h2>
+  <div class="tblwrap"><table>
+    <tr><th>Property</th><th>Default</th><th>Description</th></tr>
+    <tr><td><code>Name</code></td><td>empty</td><td>Optional. Lets scripts address the modifier through <code>SetModifierEnabled</code> and <code>SetModifierWeight</code> on the director.</td></tr>
+    <tr><td><code>Enabled</code></td><td>on</td><td>Off: the modifier still runs with weight 0, so springs and timers settle instead of resuming mid-effect later. Disabled modifiers do not receive impulses.</td></tr>
+    <tr><td><code>Weight</code></td><td>1</td><td>How strongly the modifier applies (0&ndash;1).</td></tr>
+    <tr><td><code>Views</code></td><td>per modifier</td><td>The kinds of view the modifier applies to: First Person, Third Person, Fixed, Rail, Top Down, Other. With the active view outside the scope, the weight is 0.</td></tr>
+    <tr><td><code>AllowInXR</code></td><td>off</td><td>Only on modifiers that rotate or shake the camera (Shake, Recoil, Head Bob, Lean, Landing). These sit out while the camera is in Stereo mode, because they cause discomfort in a headset, unless this is on.</td></tr>
+  </table></div>
+  <p>
+    In Stereo mode the director writes only position and yaw to the camera, since the headset owns the rest.
+  </p>
+
+  <h3>Impulses</h3>
+  <p>
+    One-shot events reach the modifiers through <code>plMsgCameraImpulse</code> (see
+    <a href="Director.html">Messages</a>) or the director's <code>AddTrauma</code> and <code>AddRecoil</code>.
+    Shake reacts to Shake impulses, Recoil to Recoil impulses and Landing to Landing impulses. Impulses go to the
+    enabled modifiers of the active view and of the director.
+  </p>
+
+  <h2>Effect modifiers at a glance</h2>
+  <div class="tblwrap"><table>
+    <tr><th>Modifier</th><th>Default Views</th><th>Driven by</th><th>Effect</th></tr>
+    <tr><td>Shake</td><td>all</td><td>Trauma from impulses and shake volumes</td><td>Smooth noise on yaw, pitch, roll and optionally position.</td></tr>
+    <tr><td>FOV Kick</td><td>First, Third Person</td><td>Subject speed</td><td>Widens the field of view when moving fast.</td></tr>
+    <tr><td>Zoom</td><td>all</td><td>Input action or <code>SetZoomed</code></td><td>Narrows the field of view, pulls a third-person camera in, slows look input.</td></tr>
+    <tr><td>Recoil</td><td>First, Third Person</td><td>Recoil impulses</td><td>Spring-driven pitch and yaw kick.</td></tr>
+    <tr><td>Head Bob</td><td>First Person</td><td>Subject speed and ground state</td><td>Walking bob and nod.</td></tr>
+    <tr><td>Lean</td><td>First Person</td><td>Input actions or <code>SetLean</code></td><td>Sideways offset and roll, plus an optional constant dutch angle.</td></tr>
+    <tr><td>Landing</td><td>First, Third Person</td><td>Subject landing or Landing impulses</td><td>Spring-driven dip and pitch.</td></tr>
+    <tr><td>Damping</td><td>all</td><td>Always</td><td>Smooths position and rotation.</td></tr>
+  </table></div>
+
+  <h2>Shake</h2>
+  <p>
+    <code>plCameraShakeModifier</code> shakes the camera with smooth noise on yaw, pitch and roll, and optionally
+    on position. The amount is driven by <b>trauma</b> (0&ndash;1). Shake impulses and <code>AddTrauma</code> add
+    trauma, which then decays by <code>TraumaDecay</code> per second. Camera shake volumes at the camera's
+    position provide a second trauma value; the larger of the two is used. The shake scales with trauma squared,
+    so small amounts stay subtle and large ones get violent.
+  </p>
+  <p>
+    A Shake impulse with a <code>Radius</code> above 0 falls off linearly from its <code>Position</code> to zero
+    at that distance, measured from the camera.
+  </p>
+  <div class="tblwrap"><table>
+    <tr><th>Property</th><th>Default</th><th>Description</th></tr>
+    <tr><td><code>MaxYaw</code></td><td>4&deg;</td><td>Yaw at full trauma.</td></tr>
+    <tr><td><code>MaxPitch</code></td><td>4&deg;</td><td>Pitch at full trauma.</td></tr>
+    <tr><td><code>MaxRoll</code></td><td>6&deg;</td><td>Roll at full trauma.</td></tr>
+    <tr><td><code>MaxOffset</code></td><td>0</td><td>Sideways and vertical position shake at full trauma, in meters (0&ndash;2).</td></tr>
+    <tr><td><code>Frequency</code></td><td>9</td><td>Speed of the noise (0.1&ndash;60). Higher is faster.</td></tr>
+    <tr><td><code>TraumaDecay</code></td><td>0.9</td><td>Trauma removed per second (0&ndash;10).</td></tr>
+    <tr><td><code>UseShakeVolumes</code></td><td>on</td><td>Also shakes from camera shake volumes at the camera's position.</td></tr>
+  </table></div>
+
+  <h3>Camera Shake Volume Sphere</h3>
+  <p>
+    <code>plCameraShakeVolumeSphereComponent</code> defines a sphere in which the camera shakes. Its strength is
+    highest at the center and falls off linearly to zero at <code>Radius</code>. Where volumes overlap, the
+    strongest one counts. Shake modifiers with <code>UseShakeVolumes</code> on and the legacy Camera Shake
+    component both read these volumes. It is listed under <b>Cameras/Shake</b>.
+  </p>
+  <div class="tblwrap"><table>
+    <tr><th>Property</th><th>Default</th><th>Description</th></tr>
+    <tr><td><code>Strength</code></td><td>0</td><td>Strength at the center, usually between 0 and 1.</td></tr>
+    <tr><td><code>BurstDuration</code></td><td>0 s</td><td>Above 0: after this time from play start the volume deactivates and runs <code>OnFinishedAction</code>. 0 shakes constantly.</td></tr>
+    <tr><td><code>OnFinishedAction</code></td><td>None</td><td>What happens when a burst ends, for example deleting the object.</td></tr>
+    <tr><td><code>Radius</code></td><td>1</td><td>Radius of the sphere (at least 0.1).</td></tr>
+  </table></div>
+
+  <h2>FOV Kick</h2>
+  <p>
+    <code>plCameraFovKickModifier</code> widens the field of view as the subject's horizontal speed rises past
+    <code>SpeedThreshold</code>, reaching <code>MaxKick</code> at <code>FullSpeed</code>. The kick eases in over
+    <code>InTime</code> and out over <code>OutTime</code>.
+  </p>
+  <div class="tblwrap"><table>
+    <tr><th>Property</th><th>Default</th><th>Description</th></tr>
+    <tr><td><code>SpeedThreshold</code></td><td>4.5</td><td>Speed in m/s where the kick starts.</td></tr>
+    <tr><td><code>FullSpeed</code></td><td>7</td><td>Speed in m/s where the full kick is reached.</td></tr>
+    <tr><td><code>MaxKick</code></td><td>10</td><td>Degrees added at full speed (-60 to 60). Negative values narrow the view.</td></tr>
+    <tr><td><code>InTime</code></td><td>0.25 s</td><td>Time constant while the kick grows.</td></tr>
+    <tr><td><code>OutTime</code></td><td>0.4 s</td><td>Time constant while the kick shrinks.</td></tr>
+  </table></div>
+
+  <h2>Zoom</h2>
+  <p>
+    <code>plCameraZoomModifier</code> zooms while its <code>Action</code> is held or while the director's
+    <code>SetZoomed(true)</code> is in effect. It multiplies the field of view by <code>FovScale</code>, moves a
+    third-person camera toward its subject point by <code>ArmPull</code>, and multiplies look input by
+    <code>LookScale</code> from the next frame on, so aiming is slower while zoomed.
+  </p>
+  <div class="tblwrap"><table>
+    <tr><th>Property</th><th>Default</th><th>Description</th></tr>
+    <tr><td><code>Action</code></td><td><code>Aim</code></td><td>Input action that zooms while held.</td></tr>
+    <tr><td><code>FovScale</code></td><td>0.6</td><td>Field-of-view multiplier when fully zoomed (0.05&ndash;2).</td></tr>
+    <tr><td><code>ArmPull</code></td><td>0.4</td><td>Third-person views only: fraction of the way from the camera to the subject point the camera moves when fully zoomed (0&ndash;0.95).</td></tr>
+    <tr><td><code>LookScale</code></td><td>0.5</td><td>Look input multiplier when fully zoomed (0&ndash;2).</td></tr>
+    <tr><td><code>BlendTime</code></td><td>0.15 s</td><td>Time constant for zooming in and out.</td></tr>
+  </table></div>
+
+  <h2>Recoil</h2>
+  <p>
+    <code>plCameraRecoilModifier</code> kicks the aim on every Recoil impulse (<code>AddRecoil</code> or
+    <code>plMsgCameraImpulse</code> with Type Recoil) and a damped spring brings it back. The impulse's pitch and
+    yaw are the kick; <code>RandomYaw</code> adds a random sideways part. With the default
+    <code>Stiffness</code> and <code>Damping</code> the kick peaks at about the requested angle: a 3&deg; recoil
+    peaks at about 3&deg;. A much stiffer or softer spring peaks lower or higher.
+  </p>
+  <div class="tblwrap"><table>
+    <tr><th>Property</th><th>Default</th><th>Description</th></tr>
+    <tr><td><code>Stiffness</code></td><td>140</td><td>Spring stiffness (1&ndash;2000). Higher returns faster.</td></tr>
+    <tr><td><code>Damping</code></td><td>18</td><td>Spring damping (0&ndash;200). Higher overshoots less.</td></tr>
+    <tr><td><code>RandomYaw</code></td><td>1.2&deg;</td><td>Largest random sideways kick added to each impulse.</td></tr>
+  </table></div>
+
+  <h2>Head Bob</h2>
+  <p>
+    <code>plCameraHeadBobModifier</code> adds a walking bob: the camera dips at every footfall and sways sideways
+    over two steps, with a small downward nod. It scales with the subject's horizontal speed up to
+    <code>FullSpeed</code> and fades out while the subject is in the air.
+  </p>
+  <div class="tblwrap"><table>
+    <tr><th>Property</th><th>Default</th><th>Description</th></tr>
+    <tr><td><code>VerticalAmplitude</code></td><td>0.04</td><td>Vertical bob in meters (0&ndash;0.5).</td></tr>
+    <tr><td><code>LateralAmplitude</code></td><td>0.03</td><td>Sideways sway in meters (0&ndash;0.5).</td></tr>
+    <tr><td><code>StepsPerMeter</code></td><td>0.6</td><td>Footfalls per meter travelled (0.05&ndash;5).</td></tr>
+    <tr><td><code>PitchNod</code></td><td>0.4&deg;</td><td>Downward nod at each footfall.</td></tr>
+    <tr><td><code>FullSpeed</code></td><td>5</td><td>Speed in m/s at which the bob reaches full size.</td></tr>
+  </table></div>
+
+  <h2>Lean</h2>
+  <p>
+    <code>plCameraLeanModifier</code> leans the camera sideways while <code>LeanLeftAction</code> or
+    <code>LeanRightAction</code> is held, or by the director's <code>SetLean</code> (added to the actions). It
+    moves the camera up to <code>SideOffset</code> to the side and rolls it by up to <code>MaxRoll</code>. A
+    0.15 m sphere is swept to the side first, against static and dynamic shapes, so the camera never leans
+    through a wall. <code>DutchAngle</code> adds a constant roll on top.
+  </p>
+  <div class="tblwrap"><table>
+    <tr><th>Property</th><th>Default</th><th>Description</th></tr>
+    <tr><td><code>LeanLeftAction</code></td><td><code>LeanLeft</code></td><td>Input action that leans left.</td></tr>
+    <tr><td><code>LeanRightAction</code></td><td><code>LeanRight</code></td><td>Input action that leans right.</td></tr>
+    <tr><td><code>MaxRoll</code></td><td>12&deg;</td><td>Roll at full lean.</td></tr>
+    <tr><td><code>SideOffset</code></td><td>0.35</td><td>Sideways offset at full lean, in meters (0&ndash;2).</td></tr>
+    <tr><td><code>BlendTime</code></td><td>0.15 s</td><td>Time constant for leaning in and out.</td></tr>
+    <tr><td><code>DutchAngle</code></td><td>0&deg;</td><td>Constant roll, scaled by the weight.</td></tr>
+    <tr><td><code>CollisionLayer</code></td><td>0</td><td>Physics collision layer for the side sweep.</td></tr>
+  </table></div>
+
+  <h2>Landing</h2>
+  <p>
+    <code>plCameraLandingModifier</code> dips the camera when the subject lands and springs back. A landing is
+    detected when the subject goes from airborne to grounded; the fall speed just before decides the dip. A
+    Landing impulse does the same with its <code>Strength</code> as the fall speed in m/s. Falls slower than
+    <code>MinSpeed</code> do nothing. The dip is <code>(fall speed - MinSpeed) &times; DipPerSpeed + 0.02</code>
+    meters, at most <code>MaxDip</code>, and the camera pitches down by <code>PitchPerMeter</code> per meter of
+    dip. With the default spring the dip bottoms out at about that depth.
+  </p>
+  <div class="tblwrap"><table>
+    <tr><th>Property</th><th>Default</th><th>Description</th></tr>
+    <tr><td><code>MinSpeed</code></td><td>3</td><td>Slowest fall in m/s that causes a dip.</td></tr>
+    <tr><td><code>DipPerSpeed</code></td><td>0.03</td><td>Meters of dip per m/s above <code>MinSpeed</code> (0&ndash;1).</td></tr>
+    <tr><td><code>MaxDip</code></td><td>0.35</td><td>Deepest dip in meters (0&ndash;2).</td></tr>
+    <tr><td><code>PitchPerMeter</code></td><td>12&deg;</td><td>Pitch per meter of dip.</td></tr>
+    <tr><td><code>Stiffness</code></td><td>120</td><td>Spring stiffness (1&ndash;2000).</td></tr>
+    <tr><td><code>Damping</code></td><td>14</td><td>Spring damping (0&ndash;200).</td></tr>
+  </table></div>
+  <div class="note">
+    <div class="nh">Note</div>
+    Automatic landing detection and Head Bob's airborne check need a component on the subject that exposes
+    <code>IsInAir</code> or <code>IsStandingOnGround</code>, as the character controllers do. Without one the
+    subject always counts as grounded; send Landing impulses from gameplay code instead.
+  </div>
+
+  <h2>Damping</h2>
+  <p>
+    <code>plCameraDampingModifier</code> smooths position and rotation for views that have no lag of their own.
+    Each half-life is the time the camera takes to cover half the remaining distance to the pose. A jump of more
+    than 25 m is treated as a cut and followed at once.
+  </p>
+  <div class="tblwrap"><table>
+    <tr><th>Property</th><th>Default</th><th>Description</th></tr>
+    <tr><td><code>PositionHalfLife</code></td><td>0.08 s</td><td>Position smoothing. 0 follows exactly.</td></tr>
+    <tr><td><code>RotationHalfLife</code></td><td>0.05 s</td><td>Rotation smoothing. 0 follows exactly.</td></tr>
+  </table></div>
+  <div class="note">
+    <div class="nh">Note</div>
+    Damping is an effect modifier, so it smooths everything listed before it in the effects stage. Put it first
+    in the list so shake and recoil listed after it keep their full sharpness.
+  </div>
+
+  <h2>Adding weapon feedback to a first-person camera</h2>
+  <ol class="steps">
+    <li>Select the Camera Director and open its <code>Modifiers</code> list.</li>
+    <li>Add a <b>Damping</b> modifier if the view feels jittery, then a <b>Recoil</b>, a <b>Shake</b>, a
+      <b>Zoom</b> and a <b>Head Bob</b> modifier, in that order.</li>
+    <li>Name the Shake modifier <code>Shake</code> so scripts can turn it down with
+      <code>SetModifierWeight("Shake", 0.5)</code>.</li>
+    <li>From the weapon script, call <code>AddRecoil(3, 0)</code> on the director for each shot. For explosions,
+      send a <code>plMsgCameraImpulse</code> with Type Shake, the explosion's <code>Position</code>, a
+      <code>Radius</code> and a <code>Strength</code>, or call <code>AddTrauma</code>.</li>
+    <li>Bind the <code>Aim</code> action in the input action map to the aim button.</li>
+    <li>Play with <code>Cameras.Debug 1</code> to watch each modifier's contribution.</li>
+  </ol>
+
+  <h2>Troubleshooting</h2>
+  <div class="tblwrap"><table>
+    <tr><th>Symptom</th><th>Likely cause</th></tr>
+    <tr><td>A modifier does nothing</td><td>The active view's kind is not in its <code>Views</code> scope (Head Bob and Lean default to First Person only), it is disabled, or its weight is 0. <code>Cameras.Debug 1</code> lists it with its contribution.</td></tr>
+    <tr><td>No shake, recoil or bob in a headset</td><td>Rotational effects sit out in Stereo mode. Turn on <code>AllowInXR</code> for the ones you want.</td></tr>
+    <tr><td>Recoil feels muted</td><td>A Damping modifier listed after Recoil smooths the kick. Move Damping to the top of the list.</td></tr>
+    <tr><td>Lean or Zoom ignores the keys</td><td>The action names do not match the input action map, or no active <code>plInputComponent</code> is found on the subject, the view's object or their parents.</td></tr>
+    <tr><td>Shake volumes do not shake the camera</td><td><code>UseShakeVolumes</code> is off, the volume's <code>Strength</code> is 0, or the camera is outside the radius.</td></tr>
+  </table></div>
+
+  <div class="seealso"><b>See also:</b>
+    <a href="index.html">Gameplay Cameras</a> &middot;
+    <a href="Framing.html">Framing, Look At and Focus</a> &middot;
+    <a href="Director.html">Camera Director</a> &middot;
+    <a href="Views.html">Camera Views</a>
+  </div>
+</div>
+</body>
+</html>
