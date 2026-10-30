@@ -9,8 +9,9 @@ public class CamerasPluginTarget : TargetRules
         OutputName = "plCamerasPlugin";
         OutputDirectory = PlasmaPackageSdk.PackageBinaryDirectory(context);
         UsePCHFiles = true;
-        UseUnityBuild = true;
-        UseAdaptiveUnityBuild = true;
+        // Modifier translation units have private helpers with matching names.
+        UseUnityBuild = false;
+        UseAdaptiveUnityBuild = false;
         UseIncrementalLinking = true;
         ExtraModules.Add("CamerasPluginModule");
     }
