@@ -342,6 +342,7 @@ void plCameraDirectorComponent::StartBlend(const Request& request, plCameraViewC
   // the very first view cuts in; afterwards everything blends from where the camera is now
   const bool bCut = !m_bHasOutput || m_ActiveCurve == plCameraBlendCurve::Cut || !m_BlendDuration.IsPositive();
   m_fBlendT = bCut ? 1.0f : 0.0f;
+  m_bCutPending = bCut && m_bHasOutput;
   m_BlendFrom = m_Output;
 
   pView->OnShownByDirector(m_Output);
@@ -441,6 +442,10 @@ void plCameraDirectorComponent::UpdateDirector(float fDeltaSeconds)
   m_bHasOutput = true;
 
   plCameraWorldModule::WritePoseToCamera(GetOwner(), pCamera, pose, settings, m_bWriteFocus);
+
+  if (m_bCutPending && pCamera != nullptr)
+    pCamera->NotifyCameraCut();
+  m_bCutPending = false;
 
   PublishStats();
 
