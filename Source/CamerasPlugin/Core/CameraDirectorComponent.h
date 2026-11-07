@@ -177,6 +177,7 @@ private:
 
   plCameraPose m_Output;
   bool m_bHasOutput = false;
+  bool m_bCutPending = false; ///< The next written pose is a hard cut; the camera is told so motion blur and TAA skip that frame.
   float m_fLookScale = 1.0f;
   double m_fTime = 0.0;
 };
